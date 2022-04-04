@@ -116,7 +116,7 @@ def get_intercepts_between_line1_normal_and_line2(line1: Line2D,
     represents the intercept with line2 from line1's normal defined using line1's internal point1
     (starting point) and internal point2 (ending point), respectively."""
     p1 = get_intercept_between_line1_normal_at_given_point_and_line2(
-        line1, line2, line1.point1)
+        line1, line1.point1, line2)
     p2 = get_intercept_between_line1_normal_at_given_point_and_line2(
-        line1, line2, line1.point2)
+        line1, line1.point2, line2)
     return p1, p2
