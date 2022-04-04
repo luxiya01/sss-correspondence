@@ -1,5 +1,8 @@
+from collections import defaultdict
 import json
 import numpy as np
+from matplotlib import pyplot as plt
+import seaborn as sns
 from auvlib.bathy_maps.map_draper import sss_meas_data
 from simple_shapes import Point2D, Line2D, get_intercepts_between_line1_normal_and_line2
 
@@ -166,3 +169,35 @@ def train_test_split(data_info_dict: str,
                         (test_end_idx, segment_end_idx))
         split_dict[file_id] = file_split_dict
     return split_dict
+
+
+def plot_train_test_split(split_dict: dict):
+    train_pos = defaultdict(list)
+    test_pos = []
+    for file_id, file_split_dict in split_dict.items():
+        if len(file_split_dict['valid_idx']) <= 0:
+            continue
+        data = sss_meas_data.read_single(file_split_dict['path'])
+        for (start_idx, end_idx) in file_split_dict['train_idx']:
+            train_pos[file_id].extend(data.pos[start_idx:end_idx + 1])
+        for (start_idx, end_idx) in file_split_dict['test_idx']:
+            test_pos.extend(data.pos[start_idx:end_idx + 1])
+
+    with sns.color_palette('Blues', n_colors=len(train_pos)):
+        fig, ax = plt.subplots()
+        for file_id, pos in train_pos.items():
+            pos_array = np.array(pos)
+            ax.plot(pos_array[:, 0],
+                    pos_array[:, 1],
+                    label=f'{file_id} training data')
+    test_pos_array = np.array(test_pos)
+    ax.plot(test_pos_array[:, 0],
+            test_pos_array[:, 1],
+            label=f'Testing data',
+            c='r')
+
+    ax.legend(markerscale=10, loc='lower right')
+    ax.set_title('AUV positions included in training and test data')
+    ax.set_xlabel('X position (easting)')
+    ax.set_ylabel('Y position (northing)')
+    plt.show()
