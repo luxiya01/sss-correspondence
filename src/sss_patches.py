@@ -51,3 +51,29 @@ class SSSPatch:
     def length(self):
         """Returns the number of pings included in the patch."""
         return self.end_idx - self.start_idx + 1
+
+
+def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
+                         patch_size: int, step_size: int):
+    """
+    Generates patches of class SSSPatch from the sss_meas_data with the required specifications.
+
+    Parameters
+    ----------
+    file_id: str
+        File id of the sss_meas_data used for patch generation.
+    path: str
+        File path to sss_meas_data file used for patch generation.
+    valid_idx: list[tuple]
+        A list of tuples that indicates the ping ids/indices to be included in the patch
+        creation. Each tuple contains a start and end index for a segment of valid pings
+        for patch generation.
+    patch_size: int
+        The number of pings to be included in each patch, i.e. the patch height.
+        Note that the patch width is determined by the width of the sss_meas_data.
+    step_size: int
+        The number of pings each consecutive patch would differ.
+    """
+    sss_data = sss_meas_data.read_single(path)
+    for (start_idx, end_idx) in valid_idx:
+        pass
