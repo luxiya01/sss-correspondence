@@ -1,3 +1,15 @@
+"""
+This module contains the definition of SSSPatch class, as well as functions to generate patches from
+one sss_meas_data.
+
+Exposes dataclass:
+    - SSSPatch
+
+Exposed functions:
+    - generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
+                             annotations_dir: str, patch_size: int, step_size: int,
+                             patch_outpath: str)
+"""
 from dataclasses import dataclass
 from collections import defaultdict
 import json
@@ -69,92 +81,9 @@ class SSSPatch:
         ])
 
 
-def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
-                         annotations_dir: str, patch_size: int, step_size: int,
-                         patch_outpath: str):
-    """
-    Generates patches of class SSSPatch from the sss_meas_data with the required specifications.
-
-    Parameters
-    ----------
-    file_id: str
-        File id of the sss_meas_data used for patch generation.
-    path: str
-        File path to sss_meas_data file used for patch generation.
-    valid_idx: list[tuple]
-        A list of tuples that indicates the ping ids/indices to be included in the patch
-        creation. Each tuple contains a start and end index for a segment of valid pings
-        for patch generation.
-    annotations_dir: str
-        Path to the directory containing subdirectories with annotations. The annotations are json
-        files with names of 'correspondence_annotations_{file_ids}.json'
-    patch_size: int
-        The number of pings to be included in each patch, i.e. the patch height.
-        Note that the patch width is determined by the width of the sss_meas_data.
-    step_size: int
-        The number of pings each consecutive patch would differ.
-    patch_outpath: str
-        The path to the directory where the newly generated SSSPatch objects should be stored.
-    """
-    sss_data = sss_meas_data.read_single(path)
-    nbr_pings, nbr_bins = sss_data.sss_waterfall_image.shape
-    nadir = int(nbr_bins / 2)
-    stbd_bins = (0, nadir)
-    port_bins = (nadir, nbr_bins)
-    pos = np.array(sss_data.pos)
-    rpy = np.array(sss_data.rpy)
-    sss_hits = np.stack([
-        sss_data.sss_waterfall_hits_X, sss_data.sss_waterfall_hits_Y,
-        sss_data.sss_waterfall_hits_Z
-    ],
-                        axis=-1)
-
-    if not os.path.isdir(patch_outpath):
-        os.makedirs(patch_outpath)
-
-    patch_id = 0
-    for (seg_start_idx, seg_end_idx) in valid_idx:
-        start_idx = seg_start_idx
-        end_idx = start_idx + patch_size
-
-        while end_idx <= seg_end_idx:
-            print(f'start_idx: {start_idx}, end_idx: {end_idx}')
-            for start_bin, end_bin in [stbd_bins, port_bins]:
-                print(f'\tstart_bin: {start_bin}, end_bin: {end_bin}')
-                kps = get_annotated_keypoints_in_patch(path,
-                                                       annotations_dir,
-                                                       start_ping=start_idx,
-                                                       end_ping=end_idx,
-                                                       start_bin=start_bin,
-                                                       end_bin=end_bin)
-                is_port = (start_bin == port_bins[0])
-                patch = SSSPatch(
-                    file_id=file_id,
-                    start_idx=start_idx,
-                    end_idx=end_idx,
-                    pos=pos[start_idx:end_idx, :],
-                    rpy=rpy[start_idx:end_idx, :],
-                    sss_waterfall_image=sss_data.sss_waterfall_image[
-                        start_idx:end_idx, start_bin:end_bin],
-                    sss_hits=sss_hits[start_idx:end_idx, start_bin:end_bin],
-                    is_port=is_port,
-                    annotated_keypoints=kps)
-                patch_filename = (
-                    f'{file_id}_patch{patch_id}_pings_{start_idx}to{end_idx}_'
-                    f'bins_{start_bin}to{end_bin}_isport_{is_port}.pkl')
-                with open(os.path.join(patch_outpath, patch_filename),
-                          'wb') as f:
-                    pickle.dump(patch, f)
-
-                patch_id += 1
-            # Update start and end idx for the generation of a new SSSPatch
-            start_idx += step_size
-            end_idx = start_idx + patch_size
-
-
-def get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
-                                     start_ping: int, end_ping: int,
-                                     start_bin: int, end_bin: int) -> dict:
+def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
+                                      start_ping: int, end_ping: int,
+                                      start_bin: int, end_bin: int) -> dict:
     """
     Returns a list of annotated keypoints found in the patch bounded by start and end pings and
     bins.
@@ -204,3 +133,84 @@ def get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
                     if start_ping <= kp_ping_nbr < end_ping and start_bin <= kp_bin_nbr < end_bin:
                         keypoints[annotation_filepath].append(kp_hash)
     return keypoints
+
+
+def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
+                         annotations_dir: str, patch_size: int, step_size: int,
+                         patch_outpath: str):
+    """
+    Generates patches of class SSSPatch from the sss_meas_data with the required specifications.
+
+    Parameters
+    ----------
+    file_id: str
+        File id of the sss_meas_data used for patch generation.
+    path: str
+        File path to sss_meas_data file used for patch generation.
+    valid_idx: list[tuple]
+        A list of tuples that indicates the ping ids/indices to be included in the patch
+        creation. Each tuple contains a start and end index for a segment of valid pings
+        for patch generation.
+    annotations_dir: str
+        Path to the directory containing subdirectories with annotations. The annotations are json
+        files with names of 'correspondence_annotations_{file_ids}.json'
+    patch_size: int
+        The number of pings to be included in each patch, i.e. the patch height.
+        Note that the patch width is determined by the width of the sss_meas_data.
+    step_size: int
+        The number of pings each consecutive patch would differ.
+    patch_outpath: str
+        The path to the directory where the newly generated SSSPatch objects should be stored.
+    """
+    sss_data = sss_meas_data.read_single(path)
+    nbr_pings, nbr_bins = sss_data.sss_waterfall_image.shape
+    nadir = int(nbr_bins / 2)
+    stbd_bins = (0, nadir)
+    port_bins = (nadir, nbr_bins)
+    pos = np.array(sss_data.pos)
+    rpy = np.array(sss_data.rpy)
+    sss_hits = np.stack([
+        sss_data.sss_waterfall_hits_X, sss_data.sss_waterfall_hits_Y,
+        sss_data.sss_waterfall_hits_Z
+    ],
+                        axis=-1)
+
+    if not os.path.isdir(patch_outpath):
+        os.makedirs(patch_outpath)
+
+    patch_id = 0
+    for (seg_start_idx, seg_end_idx) in valid_idx:
+        start_idx = seg_start_idx
+        end_idx = start_idx + patch_size
+
+        while end_idx <= seg_end_idx:
+            for start_bin, end_bin in [stbd_bins, port_bins]:
+                kps = _get_annotated_keypoints_in_patch(path,
+                                                        annotations_dir,
+                                                        start_ping=start_idx,
+                                                        end_ping=end_idx,
+                                                        start_bin=start_bin,
+                                                        end_bin=end_bin)
+                is_port = (start_bin == port_bins[0])
+                patch = SSSPatch(
+                    file_id=file_id,
+                    start_idx=start_idx,
+                    end_idx=end_idx,
+                    pos=pos[start_idx:end_idx, :],
+                    rpy=rpy[start_idx:end_idx, :],
+                    sss_waterfall_image=sss_data.sss_waterfall_image[
+                        start_idx:end_idx, start_bin:end_bin],
+                    sss_hits=sss_hits[start_idx:end_idx, start_bin:end_bin],
+                    is_port=is_port,
+                    annotated_keypoints=kps)
+                patch_filename = (
+                    f'{file_id}_patch{patch_id}_pings_{start_idx}to{end_idx}_'
+                    f'bins_{start_bin}to{end_bin}_isport_{is_port}.pkl')
+                with open(os.path.join(patch_outpath, patch_filename),
+                          'wb') as f:
+                    pickle.dump(patch, f)
+
+                patch_id += 1
+            # Update start and end idx for the generation of a new SSSPatch
+            start_idx += step_size
+            end_idx = start_idx + patch_size
