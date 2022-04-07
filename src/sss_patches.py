@@ -21,6 +21,21 @@ from auvlib.bathy_maps.map_draper import sss_meas_data
 
 
 @dataclass
+class Rectangle:
+    """Class representing a rectangle by specifying (xmin, xmax, ymin, ymax).
+    The four corners of the rectangle are defined with the following four coordinates:
+    - lower left corner: (xmin, ymin)
+    - lower right corner: (xmin, ymax)
+    - upper left corner: (xmax, ymin)
+    - upper right corner: (xmax, ymax)
+    """
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
+
+
+@dataclass
 class SSSPatch:
     """Class representing a patch of sss_meas_data.
     Note that index 0 denotes the first ping collected, i.e. the patch should be viewed as the data
@@ -30,10 +45,16 @@ class SSSPatch:
     ----------
     file_id: str
         The file id of the original sss_meas_data from which the SSSPatch is created.
-    start_idx: int
-        The start index of the sss patch from the sss_meas_data
-    end_idx: int
-        The end index of the sss patch from the sss_meas_data
+    filename: str
+        The name of the sss_meas_data file from which the patch is extracted.
+    start_ping: int
+        The start ping index of the sss patch from the sss_meas_data
+    end_ping: int
+        The end ping index of the sss patch from the sss_meas_data
+    start_bin: int
+        The start bin index of the sss patch from the sss_meas_data
+    end_bin: int
+        The end bin index of the sss patch from the sss_meas_data
     pos: np.array
         The AUV's dead-reckoning 3D positions when collecting each ping in the patch.
         shape = (self.length, 3)
@@ -59,8 +80,11 @@ class SSSPatch:
                                       into the current patch.}
     """
     file_id: str
-    start_idx: int
-    end_idx: int
+    filename: str
+    start_ping: int
+    end_ping: int
+    start_bin: int
+    end_bin: int
     pos: np.array
     rpy: np.array
     sss_waterfall_image: np.array
@@ -69,9 +93,24 @@ class SSSPatch:
     annotated_keypoints: dict
 
     @property
-    def length(self):
+    def nbr_pings(self):
         """Returns the number of pings included in the patch."""
-        return self.end_idx - self.start_idx
+        return self.end_ping - self.start_ping
+
+    @property
+    def nbr_bins(self):
+        """Returns the number of bins included in the patch."""
+        return self.end_bin - self.start_bin
+
+    @property
+    def height(self):
+        """Alias to self.nbr_pings"""
+        return self.nbr_pings
+
+    @property
+    def width(self):
+        """Alias to self.nbr_bins"""
+        return self.nbr_bins
 
     @property
     def keypoints_count(self):
@@ -79,6 +118,22 @@ class SSSPatch:
         return sum([
             len(kp_hashes) for kp_hashes in self.annotated_keypoints.values()
         ])
+
+    @property
+    def sss_hits_bounds(self):
+        """Returns a Rectangle class that represents the range of the sss_hits inside the patch."""
+        #TODO: make pos threshold an input parameter
+        thresh = 1.
+        non_zero_sss_hits = self.sss_hits[np.logical_and(
+            self.sss_hits[:, :, 0] > thresh, self.sss_hits[:, :, 1] > thresh)]
+        x_min_hit = non_zero_sss_hits[:, 0].min()
+        x_max_hit = non_zero_sss_hits[:, 0].max()
+        y_min_hit = non_zero_sss_hits[:, 1].min()
+        y_max_hit = non_zero_sss_hits[:, 1].max()
+        return Rectangle(xmin=x_min_hit,
+                         xmax=x_max_hit,
+                         ymin=y_min_hit,
+                         ymax=y_max_hit)
 
 
 def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
@@ -122,7 +177,6 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
             if not 'correspondence_annotations' in filename:
                 continue
             annotation_filepath = os.path.join(dirpath, filename)
-            print(f'Looking into {annotation_filepath}')
             with open(annotation_filepath, 'r',
                       encoding='utf-8') as annotations_file:
                 annotations = json.load(annotations_file)
@@ -179,32 +233,35 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
         os.makedirs(patch_outpath)
 
     patch_id = 0
-    for (seg_start_idx, seg_end_idx) in valid_idx:
-        start_idx = seg_start_idx
-        end_idx = start_idx + patch_size
+    for (seg_start_ping, seg_end_ping) in valid_idx:
+        start_ping = seg_start_ping
+        end_ping = start_ping + patch_size
 
-        while end_idx <= seg_end_idx:
+        while end_ping <= seg_end_ping:
             for start_bin, end_bin in [stbd_bins, port_bins]:
                 kps = _get_annotated_keypoints_in_patch(path,
                                                         annotations_dir,
-                                                        start_ping=start_idx,
-                                                        end_ping=end_idx,
+                                                        start_ping=start_ping,
+                                                        end_ping=end_ping,
                                                         start_bin=start_bin,
                                                         end_bin=end_bin)
                 is_port = (start_bin == port_bins[0])
                 patch = SSSPatch(
                     file_id=file_id,
-                    start_idx=start_idx,
-                    end_idx=end_idx,
-                    pos=pos[start_idx:end_idx, :],
-                    rpy=rpy[start_idx:end_idx, :],
+                    filename=os.path.basename(path),
+                    start_ping=start_ping,
+                    end_ping=end_ping,
+                    start_bin=start_bin,
+                    end_bin=end_bin,
+                    pos=pos[start_ping:end_ping, :],
+                    rpy=rpy[start_ping:end_ping, :],
                     sss_waterfall_image=sss_data.sss_waterfall_image[
-                        start_idx:end_idx, start_bin:end_bin],
-                    sss_hits=sss_hits[start_idx:end_idx, start_bin:end_bin],
+                        start_ping:end_ping, start_bin:end_bin],
+                    sss_hits=sss_hits[start_ping:end_ping, start_bin:end_bin],
                     is_port=is_port,
                     annotated_keypoints=kps)
                 patch_filename = (
-                    f'{file_id}_patch{patch_id}_pings_{start_idx}to{end_idx}_'
+                    f'{file_id}_patch{patch_id}_pings_{start_ping}to{end_ping}_'
                     f'bins_{start_bin}to{end_bin}_isport_{is_port}.pkl')
                 with open(os.path.join(patch_outpath, patch_filename),
                           'wb') as f:
@@ -212,5 +269,5 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
 
                 patch_id += 1
             # Update start and end idx for the generation of a new SSSPatch
-            start_idx += step_size
-            end_idx = start_idx + patch_size
+            start_ping += step_size
+            end_ping = start_ping + patch_size
