@@ -19,12 +19,15 @@ train_outpath = f'{patch_outpath}/train'
 test_outpath = f'{patch_outpath}/test'
 
 print(f'Generate patchces for all sss_meas_data in the data_dir {data_dir}...')
+patch_id_init_val = 0
 with open(data_info_dict_path, 'r', encoding='utf-8') as f:
     data_info_dict = json.load(f)
     for file_id, file_info in data_info_dict.items():
-        generate_sss_patches(file_id, file_info['path'],
-                             file_info['valid_idx'], annotations_dir,
-                             patch_size, step_size, patch_outpath)
+        new_patch_id_init_val = generate_sss_patches(
+            file_id, file_info['path'], file_info['valid_idx'],
+            annotations_dir, patch_size, step_size, patch_outpath,
+            patch_id_init_val)
+        patch_id_init_val = new_patch_id_init_val
 
 print('Splitting sss_meas_data into training and testing data...')
 split_dict = train_test_split(data_info_dict_path, ref_sss_file_id, test_size)
@@ -72,7 +75,3 @@ print(
 print(
     f'Number of testing patches: {len(test_patches)}, {len(test_patches)/num_patches*100}% '
     f'of total number of patches')
-
-print('Generate overlap matrix for training and testing patchces...')
-#TODO: generate overlap matrix for training and testing patches based on the previously populated
-# variables train_patches and test_patches

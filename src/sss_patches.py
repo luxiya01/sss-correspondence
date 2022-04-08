@@ -210,9 +210,14 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
     return keypoints
 
 
-def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
-                         annotations_dir: str, patch_size: int, step_size: int,
-                         patch_outpath: str):
+def generate_sss_patches(file_id: str,
+                         path: str,
+                         valid_idx: list[tuple],
+                         annotations_dir: str,
+                         patch_size: int,
+                         step_size: int,
+                         patch_outpath: str,
+                         patch_id_init_val: int = 0) -> int:
     """
     Generates patches of class SSSPatch from the sss_meas_data with the required specifications.
 
@@ -236,6 +241,14 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
         The number of pings each consecutive patch would differ.
     patch_outpath: str
         The path to the directory where the newly generated SSSPatch objects should be stored.
+    patch_id_init_val: int
+        The initial value of patch_id. This value is set so that the patch_id for each SSSPatch
+        is unique in one dataset.
+
+    Returns
+    -------
+    patch_id: int
+        The first unused patch_id.
     """
     sss_data = sss_meas_data.read_single(path)
     nbr_pings, nbr_bins = sss_data.sss_waterfall_image.shape
@@ -253,7 +266,7 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
     if not os.path.isdir(patch_outpath):
         os.makedirs(patch_outpath)
 
-    patch_id = 0
+    patch_id = patch_id_init_val
     for (seg_start_ping, seg_end_ping) in valid_idx:
         start_ping = seg_start_ping
         end_ping = start_ping + patch_size
@@ -293,3 +306,4 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
             # Update start and end idx for the generation of a new SSSPatch
             start_ping += step_size
             end_ping = start_ping + patch_size
+    return patch_id
