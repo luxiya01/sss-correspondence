@@ -161,9 +161,6 @@ class SSSPatch:
 
         # show the stacked sss_waterfall_image
         fig, ax = plt.subplots(figsize=(20, 5))
-        ax.set_title(
-            f'Keypoints and correspondences between SSSPatches patch_id={self.patch_id} (left) and '
-            f'patch_id={p2.patch_id} (right)')
         plt.imshow(normalize_waterfall_image(image))
 
         # show keypoints from self
