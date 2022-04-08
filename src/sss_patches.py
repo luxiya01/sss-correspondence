@@ -29,6 +29,8 @@ class SSSPatch:
 
     Parameters
     ----------
+    patch_id: int
+        Unique id for the SSSPatch.
     file_id: str
         The file id of the original sss_meas_data from which the SSSPatch is created.
     filename: str
@@ -68,6 +70,7 @@ class SSSPatch:
         i.e. for a keypoint with (ping_idx, bin_idx), the same keypoint is found in the original
         sss_meas_data at (ping_idx+start_ping, bin_idx + start_bin)
     """
+    patch_id: int
     file_id: str
     filename: str
     start_ping: int
@@ -128,7 +131,7 @@ class SSSPatch:
         the patch."""
         fig, ax = plt.subplots()
         ax.set_title(
-            f'SSSPatch: pings ({self.start_ping}, {self.end_ping}), bins ({self.start_bin},'
+            f'SSSPatch {self.patch_id}: pings ({self.start_ping}, {self.end_ping}), bins ({self.start_bin},'
             f'{self.end_bin}) from {self.file_id}')
         ax.imshow(normalize_waterfall_image(self.sss_waterfall_image),
                   extent=[
@@ -265,6 +268,7 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
                                                         end_bin=end_bin)
                 is_port = (start_bin == port_bins[0])
                 patch = SSSPatch(
+                    patch_id=patch_id,
                     file_id=file_id,
                     filename=os.path.basename(path),
                     start_ping=start_ping,
@@ -279,7 +283,7 @@ def generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
                     is_port=is_port,
                     annotated_keypoints=kps)
                 patch_filename = (
-                    f'{file_id}_patch{patch_id}_pings_{start_ping}to{end_ping}_'
+                    f'patch{patch_id}_{file_id}_pings_{start_ping}to{end_ping}_'
                     f'bins_{start_bin}to{end_bin}_isport_{is_port}.pkl')
                 with open(os.path.join(patch_outpath, patch_filename),
                           'wb') as f:
