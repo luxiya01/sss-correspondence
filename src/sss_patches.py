@@ -4,6 +4,7 @@ one sss_meas_data.
 
 Exposes dataclass:
     - SSSPatch
+    - Rectangle
 
 Exposed functions:
     - generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
@@ -11,7 +12,6 @@ Exposed functions:
                              patch_outpath: str)
 """
 from dataclasses import dataclass
-from collections import defaultdict
 import json
 import os
 import pickle
@@ -76,8 +76,11 @@ class SSSPatch:
     annotated_keypoints: dict
         A dictionary of keypoint hahshes whose locations fall into the patch.
         The dictionary has the following structure:
-            {annotation-file-path: list of keypoint hashes from this annotation file that fall
-                                      into the current patch.}
+            {keypoint hash: {"pos": (ping_idx, bin_idx), "annotation_file": path to the annotation
+            file containing this keypoint}
+        Note that the keypoint position in "pos" are given in the index of the patch.
+        i.e. for a keypoint with (ping_idx, bin_idx), the same keypoint is found in the original
+        sss_meas_data at (ping_idx+start_ping, bin_idx + start_bin)
     """
     file_id: str
     filename: str
@@ -115,9 +118,7 @@ class SSSPatch:
     @property
     def keypoints_count(self):
         """Returns the total number of keypoints in the patch"""
-        return sum([
-            len(kp_hashes) for kp_hashes in self.annotated_keypoints.values()
-        ])
+        return len(self.annotated_keypoints)
 
     @property
     def sss_hits_bounds(self):
@@ -166,11 +167,14 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
     keypoints: dict
         A dictionary of keypoint hahshes whose locations fall into the patch.
         The dictionary has the following structure:
-            {annotation-file-path: list of keypoint hashes from this annotation file that fall
-                                      into the current patch.}
+            {keypoint hash: {"pos": (ping_idx, bin_idx), "annotation_file": path to the annotation
+            file containing this keypoint}
+        Note that the keypoint position in "pos" are given in the index of the patch.
+        i.e. for a keypoint with (ping_idx, bin_idx), the same keypoint is found in the original
+        sss_meas_data at (ping_idx+start_ping, bin_idx + start_bin)
     """
     patch_filename = os.path.basename(path)
-    keypoints = defaultdict(list)
+    keypoints = {}
 
     for (dirpath, _, filenames) in os.walk(annotations_dir):
         for filename in filenames:
@@ -185,7 +189,12 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
                         continue
                     kp_ping_nbr, kp_bin_nbr = annotations_dict[patch_filename]
                     if start_ping <= kp_ping_nbr < end_ping and start_bin <= kp_bin_nbr < end_bin:
-                        keypoints[annotation_filepath].append(kp_hash)
+                        keypoints[kp_hash] = {
+                            "pos":
+                            (kp_ping_nbr - start_ping, kp_bin_nbr - start_bin),
+                            "annotation_file":
+                            annotation_filepath
+                        }
     return keypoints
 
 
