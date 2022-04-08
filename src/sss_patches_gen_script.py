@@ -32,7 +32,7 @@ split_dict_file = os.path.join(patch_outpath, 'train_test_split.json')
 with open(split_dict_file, 'w', encoding='utf-8') as f:
     json.dump(split_dict_file, f)
 split_dict_savefig_path = os.path.join(patch_outpath, 'train_test_split.pdf')
-plot_train_test_split(split_dict, split_dict_savefig_path)
+plot_train_test_split(split_dict, split_dict_savefig_path, show=False)
 
 print(
     'Splitting patches into training and testing and recording pos extent for each patch...'
@@ -42,9 +42,9 @@ test_patches = {}
 for patch_filename in os.listdir(patch_outpath):
     if patch_filename.split('.')[-1] != 'pkl':
         continue
-    test_indices = split_dict[patch.file_id]['test_idx']
     with open(os.path.join(patch_outpath, patch_filename), 'rb') as f:
         patch = pickle.load(f)
+        test_indices = split_dict[patch.file_id]['test_idx']
         is_test = False
         for (t_start, t_end) in test_indices:
             if t_start <= patch.start_ping <= t_end or t_start <= patch.end_ping <= t_end:
