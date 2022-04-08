@@ -4,7 +4,6 @@ one sss_meas_data.
 
 Exposes dataclass:
     - SSSPatch
-    - Rectangle
 
 Exposed functions:
     - generate_sss_patches(file_id: str, path: str, valid_idx: list[tuple],
@@ -19,21 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from auvlib.bathy_maps.map_draper import sss_meas_data
 from utils import normalize_waterfall_image
-
-
-@dataclass
-class Rectangle:
-    """Class representing a rectangle by specifying (xmin, xmax, ymin, ymax).
-    The four corners of the rectangle are defined with the following four coordinates:
-    - lower left corner: (xmin, ymin)
-    - lower right corner: (xmin, ymax)
-    - upper left corner: (xmax, ymin)
-    - upper right corner: (xmax, ymax)
-    """
-    xmin: float
-    xmax: float
-    ymin: float
-    ymax: float
+from simple_shapes import Rectangle
 
 
 @dataclass

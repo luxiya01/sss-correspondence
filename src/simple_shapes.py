@@ -2,6 +2,7 @@
 This module contains simple shapes used to split the sss_meas_data into training and test segments.
 
 Exposed data classes:
+    - Rectangle
     - Point2D
     - Line2D
 
@@ -16,6 +17,21 @@ from dataclasses import dataclass
 from matplotlib import pyplot as plt
 import numpy as np
 import seaborn as sns
+
+
+@dataclass
+class Rectangle:
+    """Class representing a rectangle by specifying (xmin, xmax, ymin, ymax).
+    The four corners of the rectangle are defined with the following four coordinates:
+    - lower left corner: (xmin, ymin)
+    - lower right corner: (xmin, ymax)
+    - upper left corner: (xmax, ymin)
+    - upper right corner: (xmax, ymax)
+    """
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
 
 
 @dataclass
