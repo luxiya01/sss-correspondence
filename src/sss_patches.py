@@ -18,6 +18,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from auvlib.bathy_maps.map_draper import sss_meas_data
+from utils import normalize_waterfall_image
 
 
 @dataclass
@@ -135,6 +136,29 @@ class SSSPatch:
                          xmax=x_max_hit,
                          ymin=y_min_hit,
                          ymax=y_max_hit)
+
+    @property
+    def plot(self):
+        """Returns a matplotlib figure showing the sss_waterfall_image and annotated_keypoints in
+        the patch."""
+        fig, ax = plt.subplots()
+        ax.set_title(
+            f'SSSPatch: pings ({self.start_ping}, {self.end_ping}), bins ({self.start_bin},'
+            f'{self.end_bin}) from {self.file_id}')
+        ax.imshow(normalize_waterfall_image(self.sss_waterfall_image),
+                  extent=[
+                      self.start_bin, self.end_bin, self.end_ping,
+                      self.start_ping
+                  ])
+        ax.scatter([
+            x['pos'][1] + self.start_bin
+            for x in self.annotated_keypoints.values()
+        ], [
+            x['pos'][0] + self.start_ping
+            for x in self.annotated_keypoints.values()
+        ],
+                   c='y')
+        return ax
 
 
 def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
