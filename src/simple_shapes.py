@@ -33,6 +33,11 @@ class Rectangle:
     ymin: float
     ymax: float
 
+    @property
+    def area(self):
+        """returns the area of the rectangle"""
+        return (self.xmax - self.xmin) * (self.ymax - self.ymin)
+
 
 @dataclass
 class Point2D:
