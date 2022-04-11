@@ -48,7 +48,8 @@ def compute_descriptors_at_annotated_locations(patch: SSSPatch, algo: cv2.Featur
 def compute_flattened_neighbourhood_pixel_values(patch: SSSPatch, ping_neighbour: int = 8,
         bin_neighbour: int = 8, use_orig_sss_intensities: bool = False):
     """For all annotated keypoints in a given SSSPatch, compute a descriptor in the form of flatten
-    pixel values around the keypoint location.
+    pixel values around the keypoint location. If the keypoint is at the edge, the neighbourhood
+    that is outside the image will be filled with 0.
 
     Parameters
     ----------
@@ -78,23 +79,22 @@ def compute_flattened_neighbourhood_pixel_values(patch: SSSPatch, ping_neighbour
     if not use_orig_sss_intensities:
         img = normalize_waterfall_image(img)
 
+    # Create a copy of the image so that all descriptors will be of the same size
+    pixel_vals = np.zeros((ping_neighbour*2 + img.shape[0], bin_neighbour*2 + img.shape[1]))
+    print(img.shape, pixel_vals[ping_neighbour:-ping_neighbour, bin_neighbour:-bin_neighbour].shape)
+    pixel_vals[ping_neighbour:-ping_neighbour, bin_neighbour:-bin_neighbour] = img
+
     annotated_kps = []
     desc = []
     for kp in patch.annotated_keypoints.values():
         ping_nbr, bin_nbr = kp['pos'][0], kp['pos'][1]
         annotated_kps.append((bin_nbr, ping_nbr))
 
-
-        #TODO: debug code when the keypoint is at the edge
-        min_ping_nbr = max(ping_nbr - ping_neighbour, 0)
-        max_ping_nbr = min(ping_nbr + ping_neighbour + 1, img.shape[0])
-        if min_ping_nbr == 0:
-            pass
-
-        flatten_pixels = img[ping_nbr - ping_neighbour:ping_nbr + ping_neighbour + 1, bin_nbr-bin_neighbour:bin_nbr+bin_neighbour+1].flatten()
+        flatten_pixels = pixel_vals[ping_nbr:ping_nbr + ping_neighbour*2 +1, bin_nbr:bin_nbr +
+                bin_neighbour*2 + 1].flatten()
         desc.append(flatten_pixels)
         print(ping_nbr, bin_nbr, len(flatten_pixels))
-    return annotated_kps, desc #np.array(desc)
+    return annotated_kps, np.array(desc)
 
 def draw_keypoints_and_descriptors(patch: SSSPatch, kps: list, desc: np.array, desc_name: str):
     #TODO: add documentation for this function
