@@ -4,8 +4,8 @@ import os
 import pickle
 import shutil
 from matplotlib import pyplot as plt
-from data import train_test_split, plot_train_test_split
-from sss_patches import SSSPatch, generate_sss_patches
+from data import train_test_split, plot_train_test_split, generate_sss_patches
+from sss_patches import SSSPatch
 
 data_dir = '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/'
 data_info_dict_path = f'{data_dir}/data_info_dict.json'
