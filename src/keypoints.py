@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 from utils import normalize_waterfall_image
 from sss_patches import SSSPatch
 
@@ -94,3 +95,23 @@ def compute_flattened_neighbourhood_pixel_values(patch: SSSPatch, ping_neighbour
         desc.append(flatten_pixels)
         print(ping_nbr, bin_nbr, len(flatten_pixels))
     return annotated_kps, desc #np.array(desc)
+
+def draw_keypoints_and_descriptors(patch: SSSPatch, kps: list, desc: np.array, desc_name: str):
+    #TODO: add documentation for this function
+    if isinstance(kps[0], tuple):
+        kp_size = desc.shape[1]//2
+        kps = [cv2.KeyPoint(x[0], x[1], size=kp_size) for x in kps]
+    img = cv2.normalize(normalize_waterfall_image(patch.sss_waterfall_image), None, 0, 255,
+            cv2.NORM_MINMAX).astype('uint8')
+    kp_img = cv2.drawKeypoints(img, kps, None, color=(0, 255, 255))
+
+    fig, ax = plt.subplots(1, 2)
+    ax[0].imshow(kp_img)
+    ax[0].set_title('Keypoint locations')
+    ax[1].imshow(desc)
+    ax[1].set_title('Descriptors')
+
+    fig.suptitle(f'Keypoint and {desc_name} descriptors for patch {patch.patch_id}', fontsize=15)
+    fig.tight_layout()
+    fig.subplots_adjust(top=1.05)
+    return ax
