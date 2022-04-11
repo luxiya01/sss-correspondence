@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from utils import normalize_waterfall_image
 from sss_patches import SSSPatch
 
@@ -9,7 +10,7 @@ def compute_descriptors_at_annotated_locations(patch: SSSPatch, algo: cv2.Featur
     Parameters
     ----------
     patch: SSSPatch
-        The descriptors are computued from the normalized 8 bit image of the sss_waterfall_image of
+        The descriptors are computed from the normalized 8 bit image of the sss_waterfall_image of
         the patch.
     algo: cv2.Feature2D
         A Feature2D instance from cv2 used to compute the descriptors. e.g. SIFT, SURF, ORB.
@@ -31,7 +32,7 @@ def compute_descriptors_at_annotated_locations(patch: SSSPatch, algo: cv2.Featur
     """
     annotated_kps = []
     for kp in patch.annotated_keypoints.values():
-        ping_nbr, bin_nbr = kp['pos'][1], kp['pos'][0]
+        ping_nbr, bin_nbr = kp['pos'][0], kp['pos'][1]
         annotated_kps.append(cv2.KeyPoint(bin_nbr, ping_nbr, size=kp_size))
 
     img = patch.sss_waterfall_image
