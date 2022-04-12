@@ -6,8 +6,6 @@ Exposes dataclass:
 """
 from dataclasses import dataclass
 import numpy as np
-import matplotlib.pyplot as plt
-from utils import normalize_waterfall_image
 from simple_shapes import Rectangle
 
 
@@ -39,7 +37,7 @@ class SSSPatch:
     rpy: np.array
         The AUV's roll, pitch and yaw when collecting each ping in the the patch.
         shape = (self.length, 3)
-    sss_waterfall_image: np.aray
+    sss_waterfall_image: np.array
         The waterfall image constructed by stacking the hit intensities of the sss pings included in
         the patch vertically. This corresponds to a segment of sss_waterfall_image in the original
         sss_meas_data.
@@ -114,79 +112,3 @@ class SSSPatch:
                          xmax=x_max_hit,
                          ymin=y_min_hit,
                          ymax=y_max_hit)
-
-    def plot(self):
-        """Returns a matplotlib figure showing the sss_waterfall_image and annotated_keypoints in
-        the patch."""
-        fig, ax = plt.subplots()
-        ax.set_title(
-            f'SSSPatch {self.patch_id}: pings ({self.start_ping}, {self.end_ping}), bins ({self.start_bin},'
-            f'{self.end_bin}) from {self.file_id}')
-        ax.imshow(normalize_waterfall_image(self.sss_waterfall_image),
-                  extent=[
-                      self.start_bin, self.end_bin, self.end_ping,
-                      self.start_ping
-                  ])
-        ax.scatter([
-            x['pos'][1] + self.start_bin
-            for x in self.annotated_keypoints.values()
-        ], [
-            x['pos'][0] + self.start_ping
-            for x in self.annotated_keypoints.values()
-        ],
-                   c='y')
-        return ax
-
-    def plot_corresponding_keypoints(self, p2):
-        """Given another SSSPatch, stack the sss_waterfall_image horizontally, plot the
-        annotated_keypoints and draw lines between the keypoints from the two image that correspond to
-        one another.
-
-        Parameters
-        ----------
-        p2: SSSPatch
-            Another SSSPatch object
-        """
-        image = np.hstack([self.sss_waterfall_image, p2.sss_waterfall_image])
-
-        # show the stacked sss_waterfall_image
-        fig, ax = plt.subplots(figsize=(20, 5))
-        plt.imshow(normalize_waterfall_image(image))
-
-        # show keypoints from self
-        ax.scatter([x['pos'][1] for x in self.annotated_keypoints.values()],
-                   [x['pos'][0] for x in self.annotated_keypoints.values()],
-                   c='r',
-                   s=5)
-
-        # show keypoints from p2
-        bin_offset = self.sss_waterfall_image.shape[1]
-        ax.scatter([
-            x['pos'][1] + bin_offset for x in p2.annotated_keypoints.values()
-        ], [x['pos'][0] for x in p2.annotated_keypoints.values()],
-                   c='r',
-                   s=5)
-
-        # show corresponding keypoints
-        overlapping_keypoints = set(
-            self.annotated_keypoints.keys()).intersection(
-                p2.annotated_keypoints.keys())
-        for kp_hash in overlapping_keypoints:
-            kp_self = self.annotated_keypoints[kp_hash]['pos']
-            kp_p2 = p2.annotated_keypoints[kp_hash]['pos']
-            ax.plot([kp_self[1], kp_p2[1] + bin_offset],
-                    [kp_self[0], kp_p2[0]],
-                    c='y',
-                    linewidth=.8)
-            ax.scatter([kp_self[1], kp_p2[1] + bin_offset],
-                       [kp_self[0], kp_p2[0]],
-                       c='y',
-                       s=5)
-
-        # show divider between self and p2
-        ax.plot([bin_offset] * self.nbr_pings * 100,
-                np.linspace(0, self.nbr_pings - 1, self.nbr_pings * 100),
-                c='red')
-        plt.axis('off')
-
-        return ax
