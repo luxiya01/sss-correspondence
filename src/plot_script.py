@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from plot import (plot_corresponding_keypoints, plot_ssspatch_with_annotated_keypoints,
+        plot_ssspatch_intensities, plot_ssspatch_intensities_normalized)
 
 #TODO: refactor this script
 data_dir = '/home/li/Documents/sss-correspondence/data/GullmarsfjordSMaRC20210209_ssh_annotations/survey2_better_resolution/9-0169to0182-nbr_pings-1301_annotated/'
@@ -32,8 +34,22 @@ def plot_ssspatches_in_folder(folder: str):
     for patch1_id, patch1_path in tqdm(files.items()):
         with open(patch1_path, 'rb') as f1:
             patch1 = pickle.load(f1)
-            patch1.plot()
-            plt.savefig(os.path.join(folder, f'patch{patch1_id}'))
+
+            ax = plot_ssspatch_with_annotated_keypoints(patch1)
+            plt.savefig(
+                os.path.join(
+                    folder, f'patch{patch1_id}_norm_intensity_with_keypoints'))
+
+            ax = plot_ssspatch_intensities(patch1)
+            plt.savefig(os.path.join(folder, f'patch{patch1_id}_intensity'),
+                        bbox_inches='tight',
+                        pad_inches=0)
+
+            ax = plot_ssspatch_intensities_normalized(patch1)
+            plt.savefig(os.path.join(folder,
+                                     f'patch{patch1_id}_norm_intensity'),
+                        bbox_inches='tight',
+                        pad_inches=0)
             plt.close()
 
             files_overlapping_with_patch1 = np.where(
