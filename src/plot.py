@@ -3,6 +3,19 @@ from matplotlib import pyplot as plt
 from sss_patches import SSSPatch
 from utils import normalize_waterfall_image
 
+def plot_ssspatch_intensities(patch: SSSPatch):
+    fig, ax = plt.subplots()
+    ax.imshow(patch.sss_waterfall_image, 'gray')
+    ax.axis('off')
+    return ax
+
+def plot_ssspatch_intensities_normalized(patch: SSSPatch):
+    fig, ax = plt.subplots()
+    ax.imshow(normalize_waterfall_image(patch.sss_waterfall_image), 'gray')
+    ax.axis('off')
+    return ax
+
+
 
 def plot_ssspatch_with_annotated_keypoints(patch: SSSPatch):
     """Returns a matplotlib figure showing the sss_waterfall_image and annotated_keypoints in
@@ -27,14 +40,14 @@ def plot_ssspatch_with_annotated_keypoints(patch: SSSPatch):
     return ax
 
 def plot_corresponding_keypoints(patch1: SSSPatch, patch2: SSSPatch):
-    """Given another SSSPatch, stack the sss_waterfall_image horizontally, plot the
+    """Given two SSSPatch, stack the sss_waterfall_image horizontally, plot the
     annotated_keypoints and draw lines between the keypoints from the two image that correspond to
     one another.
 
     Parameters
     ----------
+    patch1: SSSPatch
     patch2: SSSPatch
-        Another SSSPatch object
     """
     image = np.hstack([patch1.sss_waterfall_image, patch2.sss_waterfall_image])
 
