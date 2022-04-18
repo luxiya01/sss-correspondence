@@ -121,8 +121,8 @@ def train_test_split(data_info_dict: str,
     nbr_train_idx = np.floor((1 - test_size) * nbr_valid_idx)
     nbr_test_idx = nbr_valid_idx - nbr_train_idx
 
-    ref_sss_test_idx_start = rng.integers(
-        low=0, high=nbr_train_idx) + ref_sss_valid_indices[0]
+    ref_sss_test_idx_start = rng.integers(low=0, high=nbr_train_idx,
+                                          dtype=int) + ref_sss_valid_indices[0]
     ref_sss_test_idx_end = int(ref_sss_test_idx_start + nbr_test_idx)
     print(ref_sss_test_idx_start, ref_sss_test_idx_end)
 
@@ -134,12 +134,12 @@ def train_test_split(data_info_dict: str,
     for file_id, info in data_info.items():
         file_split_dict = info
         if file_id == ref_sss_file_id:
-            file_split_dict['test_idx'] = [(ref_sss_test_idx_start,
-                                            ref_sss_test_idx_end)]
-            file_split_dict['train_idx'] = [
-                (ref_sss_valid_indices[0], ref_sss_test_idx_start),
-                (ref_sss_test_idx_end, ref_sss_valid_indices[1])
-            ]
+            file_split_dict['test_idx'] = [[
+                ref_sss_test_idx_start, ref_sss_test_idx_end
+            ]]
+            file_split_dict['train_idx'] = [[
+                ref_sss_valid_indices[0], ref_sss_test_idx_start
+            ], [ref_sss_test_idx_end, ref_sss_valid_indices[1]]]
         else:
             sss_file = sss_meas_data.read_single(info['path'])
             file_split_dict['train_idx'] = []
@@ -162,7 +162,7 @@ def train_test_split(data_info_dict: str,
                 # None of the pings have AUV pos in the test range -> all ping to train
                 if len(test_idx) == 0:
                     file_split_dict['train_idx'].append(
-                        (segment_start_idx, segment_end_idx))
+                        [segment_start_idx, segment_end_idx])
 
                 # Make sure that the test indices are consecutive
                 else:
@@ -171,11 +171,11 @@ def train_test_split(data_info_dict: str,
                     test_start_idx = min(test_idx)
                     test_end_idx = max(test_idx)
                     file_split_dict['test_idx'].append(
-                        (test_start_idx, test_end_idx))
+                        [test_start_idx, test_end_idx])
                     file_split_dict['train_idx'].append(
-                        (segment_start_idx, test_start_idx))
+                        [segment_start_idx, test_start_idx])
                     file_split_dict['train_idx'].append(
-                        (test_end_idx, segment_end_idx))
+                        [test_end_idx, segment_end_idx])
         split_dict[file_id] = file_split_dict
     return split_dict
 

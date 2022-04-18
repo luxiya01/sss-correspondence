@@ -33,7 +33,7 @@ print('Splitting sss_meas_data into training and testing data...')
 split_dict = train_test_split(data_info_dict_path, ref_sss_file_id, test_size)
 split_dict_file = os.path.join(patch_outpath, 'train_test_split.json')
 with open(split_dict_file, 'w', encoding='utf-8') as f:
-    json.dump(split_dict_file, f)
+    json.dump(split_dict, f)
 split_dict_savefig_path = os.path.join(patch_outpath, 'train_test_split.pdf')
 plot_train_test_split(split_dict, split_dict_savefig_path, show=False)
 
