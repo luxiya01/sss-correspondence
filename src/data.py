@@ -342,6 +342,9 @@ def generate_sss_patches(file_id: str,
         end_ping = start_ping + patch_size
 
         while end_ping <= seg_end_ping:
+            patch_pos = pos[start_ping:end_ping, :]
+            patch_rpy = rpy[start_ping:end_ping, :]
+
             for start_bin, end_bin in [stbd_bins, port_bins]:
                 kps = _get_annotated_keypoints_in_patch(path,
                                                         annotations_dir,
@@ -350,21 +353,54 @@ def generate_sss_patches(file_id: str,
                                                         start_bin=start_bin,
                                                         end_bin=end_bin)
                 is_port = (start_bin == port_bins[0])
-                patch = SSSPatch(
-                    patch_id=patch_id,
-                    file_id=file_id,
-                    filename=os.path.basename(path),
-                    start_ping=start_ping,
-                    end_ping=end_ping,
-                    start_bin=start_bin,
-                    end_bin=end_bin,
-                    pos=pos[start_ping:end_ping, :],
-                    rpy=rpy[start_ping:end_ping, :],
-                    sss_waterfall_image=sss_data.sss_waterfall_image[
-                        start_ping:end_ping, start_bin:end_bin],
-                    sss_hits=sss_hits[start_ping:end_ping, start_bin:end_bin],
-                    is_port=is_port,
-                    annotated_keypoints=kps)
+
+                if is_port:
+                    patch = SSSPatch(
+                        patch_id=patch_id,
+                        file_id=file_id,
+                        filename=os.path.basename(path),
+                        start_ping=start_ping,
+                        end_ping=end_ping,
+                        start_bin=start_bin,
+                        end_bin=end_bin,
+                        pos=patch_pos,
+                        rpy=patch_rpy,
+                        sss_waterfall_image=sss_data.sss_waterfall_image[
+                            start_ping:end_ping, start_bin:end_bin],
+                        sss_hits=sss_hits[start_ping:end_ping,
+                                          start_bin:end_bin],
+                        is_port=is_port,
+                        annotated_keypoints=kps)
+
+                # For stbd side patch: rotate it so that it looks like is from port side
+                else:
+                    # Update kp positions
+                    for kp_hash, kp_dict in kps.items():
+                        orig_ping_idx, orig_bin_idx = kp_dict['pos']
+                        new_ping_idx = (end_ping -
+                                        start_ping) - orig_ping_idx - 1
+                        new_bin_idx = (end_bin - start_bin) - orig_bin_idx - 1
+                        kps[kp_hash]['pos'] = (new_ping_idx, new_bin_idx)
+
+                    patch = SSSPatch(
+                        patch_id=patch_id,
+                        file_id=file_id,
+                        filename=os.path.basename(path),
+                        start_ping=start_ping,
+                        end_ping=end_ping,
+                        start_bin=start_bin,
+                        end_bin=end_bin,
+                        pos=np.flipud(patch_pos),
+                        rpy=np.flipud(patch_rpy),
+                        sss_waterfall_image=np.rot90(
+                            sss_data.sss_waterfall_image[start_ping:end_ping,
+                                                         start_bin:end_bin],
+                            2),
+                        sss_hits=np.rot90(
+                            sss_hits[start_ping:end_ping, start_bin:end_bin],
+                            2),
+                        is_port=is_port,
+                        annotated_keypoints=kps)
                 patch_filename = (
                     f'patch{patch_id}_{file_id}_pings_{start_ping}to{end_ping}_'
                     f'bins_{start_bin}to{end_bin}_isport_{is_port}.pkl')
