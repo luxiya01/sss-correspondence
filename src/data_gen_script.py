@@ -3,11 +3,21 @@ Script to split a folder of sss_meas_data into SSSPatch, split the generated SSS
 training and testing data, compute overlap matrix and store images.
 """
 from argparse import ArgumentParser
+from collections import defaultdict
 import json
 import os
 import pickle
 import shutil
+import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 from data import generate_sss_patches, train_test_split, plot_train_test_split
+from utils import compute_overlap_between_two_rectangles, get_sorted_patches_list
+from plot import (plot_ssspatch_with_annotated_keypoints,
+                  plot_ssspatch_intensities,
+                  plot_ssspatch_intensities_normalized,
+                  plot_corresponding_keypoints)
+from sss_patches import SSSPatch
 
 
 def get_args():
@@ -45,13 +55,21 @@ def get_args():
         help='The number of pings each consecutive patch would differ.',
         default=40,
         type=int)
+    parser.add_argument(
+        '-o',
+        '--overlap-thresh',
+        help=
+        'The amount of overlapping sss_hits required for two patches to be considered overlapping',
+        default=.1,
+        type=float)
     return parser.parse_args()
 
 
 def generate_sss_patches_for_dir(data_info_dict_path: str,
                                  annotations_dir: str, patch_size: int,
-                                 step_size: int, patch_outpath: str):
-    """Generate SSSPatch from sss_meas_data in data_dir."""
+                                 step_size: int, patch_outpath: str) -> int:
+    """Generate SSSPatch from sss_meas_data in data_dir. Returns the total number of patches being
+    generated."""
 
     print(
         f'Generate patchces for all sss_meas_data in {data_info_dict_path}...')
@@ -64,6 +82,7 @@ def generate_sss_patches_for_dir(data_info_dict_path: str,
                 annotations_dir, patch_size, step_size, patch_outpath,
                 patch_id_init_val)
             patch_id_init_val = new_patch_id_init_val
+    return patch_id_init_val
 
 
 def split_patches_into_training_and_testing(data_info_dict_path: str,
@@ -106,6 +125,11 @@ def split_patches_into_training_and_testing(data_info_dict_path: str,
         'Moving the patches into their corresponding folder (train or test)...'
     )
 
+    if os.path.exists(train_outpath):
+        shutil.rmtree(train_outpath)
+    if os.path.exists(test_outpath):
+        shutil.rmtree(test_outpath)
+
     os.makedirs(train_outpath)
     os.makedirs(test_outpath)
     for filename in train_patches:
@@ -124,6 +148,173 @@ def split_patches_into_training_and_testing(data_info_dict_path: str,
         f'of total number of patches')
 
 
+def _update_overlap_matrix(patch1: SSSPatch, patch2: SSSPatch,
+                           overlap_matrix: np.array) -> np.array:
+    """Update the value of the given overlap_matrix for patch1 and patch2"""
+    overlap = compute_overlap_between_two_rectangles(patch1.sss_hits_bounds,
+                                                     patch2.sss_hits_bounds)
+    overlap_matrix[patch1.patch_id, patch2.patch_id] = overlap
+    overlap_matrix[patch2.patch_id, patch1.patch_id] = overlap
+    return overlap_matrix
+
+
+def _update_overlap_keypoints(patch1: SSSPatch, patch2: SSSPatch,
+                              overlap_nbr_kps: np.array) -> np.array:
+    """Update the value of the given overlap_nbr_kps for patch1 and patch2 with the number of shared
+    keypoints between patch1 and patch2."""
+
+    nbr_overlapping_keypoints = len(
+        set(patch1.annotated_keypoints.keys()).intersection(
+            patch2.annotated_keypoints.keys()))
+
+    overlap_nbr_kps[patch1.patch_id,
+                    patch2.patch_id] = nbr_overlapping_keypoints
+    overlap_nbr_kps[patch2.patch_id,
+                    patch1.patch_id] = nbr_overlapping_keypoints
+    return overlap_nbr_kps
+
+
+def _plot_patch(patch: SSSPatch, folder: str):
+    """Construct three plots for the given patch and store them to folder.
+
+    The three plots include:
+        - SSSPatch with keypoint annotations
+        - normalized intensity
+        - raw intensity
+    """
+    ax = plot_ssspatch_with_annotated_keypoints(patch)
+    plt.savefig(
+        os.path.join(folder,
+                     f'patch{patch.patch_id}_norm_intensity_with_keypoints'))
+
+    ax = plot_ssspatch_intensities(patch)
+    plt.savefig(os.path.join(folder, f'patch{patch.patch_id}_intensity'),
+                bbox_inches='tight',
+                pad_inches=0)
+
+    ax = plot_ssspatch_intensities_normalized(patch)
+    plt.savefig(os.path.join(folder, f'patch{patch.patch_id}_norm_intensity'),
+                bbox_inches='tight',
+                pad_inches=0)
+    plt.close()
+
+
+def _plot_correspondence(patch1: SSSPatch, patch2: SSSPatch, overlap: float,
+                         folder: str):
+    ax = plot_corresponding_keypoints(patch1, patch2)
+    ax.set_title(
+        f'Keypoints and correspondences between SSSPatches '
+        f'patch_id={patch1.patch_id} (left) and '
+        f'patch_id={patch2.patch_id} (right) with {overlap:.2f}% overlap')
+    plt.savefig(
+        os.path.join(folder,
+                     f'patch{patch1.patch_id}_and_patch{patch2.patch_id}'))
+    plt.close()
+
+
+def plot_ssspatches_in_folder(folder: str, overlap_thresh: float = 0.1):
+    """Assumes that there is an overlap.npz file in the folder"""
+    patches_in_dir = get_sorted_patches_list(folder)
+    overlap_matrix = np.load(os.path.join(folder,
+                                          'overlap.npz'))['overlap_matrix']
+    nbr_pairs_above_overlap_thresh = 0
+
+    for i, patch1_path in tqdm(enumerate(patches_in_dir)):
+        with open(patch1_path, 'rb') as f1:
+            patch1 = pickle.load(f1)
+            _plot_patch(patch1, folder)
+
+            for patch2_path in patches_in_dir[i:]:
+                patch2_id = int(patch2_path.split('/')[-1].split('_')[0][5:])
+                overlap = overlap_matrix[patch1.patch_id, patch2_id]
+
+                if overlap > overlap_thresh:
+                    with open(patch2_path, 'rb') as f2:
+                        patch2 = pickle.load(f2)
+                        _plot_correspondence(patch1, patch2, overlap * 100,
+                                             folder)
+                    nbr_pairs_above_overlap_thresh += 1
+    return nbr_pairs_above_overlap_thresh
+
+
+def compute_overlap_matrix(
+        patch_dir: str, total_num_patches: int) -> (np.array, np.array, dict):
+    """Computes the overlap matrix and number of shared keypoints between all pairs of patches in
+    patch_dir."""
+    print(f'Computing overlap matrix for {patch_dir}...')
+    overlap_matrix = np.zeros((total_num_patches, total_num_patches))
+    overlap_nbr_kps = np.zeros_like(overlap_matrix)
+    overlap_kps = defaultdict(dict)
+
+    patches_in_dir = get_sorted_patches_list(patch_dir)
+
+    for i, patch1_path in tqdm(enumerate(patches_in_dir)):
+        with open(patch1_path, 'rb') as f1:
+            patch1 = pickle.load(f1)
+
+            for patch2_path in patches_in_dir[i:]:
+                with open(patch2_path, 'rb') as f2:
+                    patch2 = pickle.load(f2)
+
+                    # ignore overlaps from patches that are created from the same sss_meas_data
+                    if patch2.file_id == patch1.file_id:
+                        continue
+
+                    overlap_matrix = _update_overlap_matrix(
+                        patch1, patch2, overlap_matrix)
+                    overlap_nbr_kps = _update_overlap_keypoints(
+                        patch1, patch2, overlap_nbr_kps)
+
+                    overlap_kps[patch1.patch_id][patch2.patch_id] = list(
+                        set(patch1.annotated_keypoints.keys()).intersection(
+                            patch2.annotated_keypoints.keys()))
+    return overlap_matrix, overlap_nbr_kps, overlap_kps
+
+
+def store_and_plot_overlap_matrix_and_kps(overlap_matrix: np.array,
+                                          overlap_nbr_kps: np.array,
+                                          overlap_kps, folder: str):
+    fig, ax = plt.subplots()
+    im0 = ax.imshow(overlap_matrix)
+    ax.set_title('%Overlap in sss_hits between all SSSPatches')
+    ax.set_ylabel('Patch ID')
+    ax.set_xlabel('Patch ID')
+    fig.colorbar(im0, ax=ax, orientation='vertical')
+    plt.savefig(os.path.join(folder, 'overlap.pdf'))
+
+    fig, ax = plt.subplots()
+    im1 = ax.imshow(overlap_nbr_kps)
+    ax.set_title('Number of shared keypoints between all SSSPatches')
+    ax.set_xlabel('Patch ID')
+    fig.colorbar(im1, ax=ax, orientation='vertical')
+    plt.savefig(os.path.join(folder, 'overlap_nbr_kps.pdf'))
+
+    plt.close('all')
+
+    np.savez(os.path.join(folder, 'overlap'),
+             overlap_matrix=overlap_matrix,
+             overlap_nbr_kps=overlap_nbr_kps)
+
+    with open(os.path.join(folder, 'overlap_kps.json'), 'w',
+              encoding='utf-8') as f:
+        json.dump(overlap_kps, f)
+
+
+def handle_folder(folder: str,
+                  total_num_patches: int,
+                  overlap_thresh: float = .1) -> int:
+    """Compute overlap matrix, number of overlapping keypoints for patch pairs in the folder, as
+    well as plotting the intensities and overlaps"""
+    overlap_matrix, overlap_nbr_kps, overlap_kps = compute_overlap_matrix(
+        folder, total_num_patches)
+
+    store_and_plot_overlap_matrix_and_kps(overlap_matrix, overlap_nbr_kps,
+                                          overlap_kps, folder)
+    nbr_pairs_above_overlap_thresh = plot_ssspatches_in_folder(
+        folder, overlap_thresh)
+    return nbr_pairs_above_overlap_thresh
+
+
 def main():
     args = get_args()
 
@@ -135,12 +326,24 @@ def main():
     train_outpath = f'{patch_outpath}/train'
     test_outpath = f'{patch_outpath}/test'
 
-    generate_sss_patches_for_dir(data_info_dict_path, annotations_dir,
-                                 args.patch_size, args.step_size,
-                                 patch_outpath)
+    total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
+                                                     annotations_dir,
+                                                     args.patch_size,
+                                                     args.step_size,
+                                                     patch_outpath)
     split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
                                             args.test_size, patch_outpath,
                                             train_outpath, test_outpath)
+    nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
+                                   args.overlap_thresh)
+    nbr_train_pairs = handle_folder(train_outpath, total_num_patches,
+                                    args.overlap_thresh)
+    print(
+        f'Number of train pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_train_pairs}'
+    )
+    print(
+        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
+    )
 
 
 if __name__ == '__main__':
