@@ -3,24 +3,21 @@ from matplotlib import pyplot as plt
 from sss_patches import SSSPatch
 from utils import normalize_waterfall_image
 
-def plot_ssspatch_intensities(patch: SSSPatch):
-    fig, ax = plt.subplots()
-    ax.imshow(patch.sss_waterfall_image, 'gray')
-    ax.axis('off')
-    return ax
 
-def plot_ssspatch_intensities_normalized(patch: SSSPatch):
-    fig, ax = plt.subplots()
-    ax.imshow(normalize_waterfall_image(patch.sss_waterfall_image), 'gray')
-    ax.axis('off')
-    return ax
+def plot_ssspatch_intensities(patch: SSSPatch, outpath: str):
+    plt.imsave(outpath, patch.sss_waterfall_image, cmap='gray')
 
+
+def plot_ssspatch_intensities_normalized(patch: SSSPatch, outpath: str):
+    plt.imsave(outpath,
+               normalize_waterfall_image(patch.sss_waterfall_image),
+               cmap='gray')
 
 
 def plot_ssspatch_with_annotated_keypoints(patch: SSSPatch):
     """Returns a matplotlib figure showing the sss_waterfall_image and annotated_keypoints in
     the patch."""
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 3))
     ax.set_title(
         f'SSSPatch {patch.patch_id}: pings ({patch.start_ping}, {patch.end_ping}), bins ({patch.start_bin},'
         f'{patch.end_bin}) from {patch.file_id}')
@@ -36,8 +33,11 @@ def plot_ssspatch_with_annotated_keypoints(patch: SSSPatch):
         x['pos'][0] + patch.start_ping
         for x in patch.annotated_keypoints.values()
     ],
-               c='y', s=5)
+               c='y',
+               s=5)
+    plt.tight_layout()
     return ax
+
 
 def plot_corresponding_keypoints(patch1: SSSPatch, patch2: SSSPatch):
     """Given two SSSPatch, stack the sss_waterfall_image horizontally, plot the
@@ -52,7 +52,7 @@ def plot_corresponding_keypoints(patch1: SSSPatch, patch2: SSSPatch):
     image = np.hstack([patch1.sss_waterfall_image, patch2.sss_waterfall_image])
 
     # show the stacked sss_waterfall_image
-    fig, ax = plt.subplots(figsize=(20, 5))
+    fig, ax = plt.subplots(figsize=(20, 3))
     plt.imshow(normalize_waterfall_image(image))
 
     # show keypoints from patch1
@@ -90,5 +90,6 @@ def plot_corresponding_keypoints(patch1: SSSPatch, patch2: SSSPatch):
             np.linspace(0, patch1.nbr_pings - 1, patch1.nbr_pings * 100),
             c='red')
     plt.axis('off')
+    plt.tight_layout()
 
     return ax
