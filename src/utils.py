@@ -1,5 +1,7 @@
 import numpy as np
+import os
 from simple_shapes import Rectangle
+from sss_patches import SSSPatch
 
 
 def normalize_waterfall_image(waterfall_image: np.array,
@@ -28,3 +30,14 @@ def compute_overlap_between_two_rectangles(r1: Rectangle,
         overlap_percentage = overlapping_area / (r1.area + r2.area -
                                                  overlapping_area)
     return overlap_percentage
+
+
+def get_sorted_patches_list(folder: str) -> list:
+    """Return a list of patches in the given folder, sorted in ascending order of patch id"""
+    patches_in_dir = sorted(
+        [
+            os.path.join(folder, x)
+            for x in os.listdir(folder) if x.split('.')[-1] == 'pkl'
+        ],
+        key=lambda p: int(p.split('/')[-1].split('_')[0][5:]))
+    return patches_in_dir
