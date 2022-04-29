@@ -187,15 +187,14 @@ def _plot_patch(patch: SSSPatch, folder: str):
         os.path.join(folder,
                      f'patch{patch.patch_id}_norm_intensity_with_keypoints'))
 
-    ax = plot_ssspatch_intensities(patch)
-    plt.savefig(os.path.join(folder, f'patch{patch.patch_id}_intensity'),
-                bbox_inches='tight',
-                pad_inches=0)
+    plot_ssspatch_intensities(patch,
+                              outpath=os.path.join(
+                                  folder,
+                                  f'patch{patch.patch_id}_intensity.png'))
 
-    ax = plot_ssspatch_intensities_normalized(patch)
-    plt.savefig(os.path.join(folder, f'patch{patch.patch_id}_norm_intensity'),
-                bbox_inches='tight',
-                pad_inches=0)
+    plot_ssspatch_intensities_normalized(
+        patch, os.path.join(folder,
+                            f'patch{patch.patch_id}_norm_intensity.png'))
     plt.close()
 
 
@@ -300,6 +299,51 @@ def store_and_plot_overlap_matrix_and_kps(overlap_matrix: np.array,
         json.dump(overlap_kps, f)
 
 
+def _write_pairs_to_file(array: np.array, thresh: float, folder: str,
+                         out_filename: str) -> int:
+    indices_above_thresh = np.argwhere(array > thresh)
+    nbr_pairs = indices_above_thresh.shape[0]
+    patch_id_to_filename = lambda patch_id, suffix: f'patch{patch_id}_{suffix}.png'
+
+    pairs_raw_intensity_str = []
+    pairs_norm_intensity_str = []
+    for i, j in indices_above_thresh:
+        pairs_norm_intensity_str.append(
+            f'{patch_id_to_filename(i, "norm_intensity")} {patch_id_to_filename(j, "norm_intensity")}'
+        )
+        pairs_raw_intensity_str.append(
+            f'{patch_id_to_filename(i, "intensity")} {patch_id_to_filename(j, "intensity")}'
+        )
+
+    with open(os.path.join(folder, f'{out_filename}_norm_intensity.txt'),
+              'w') as f:
+        f.writelines('\n'.join(pairs_norm_intensity_str))
+    with open(os.path.join(folder, f'{out_filename}_raw_intensity.txt'),
+              'w') as f:
+        f.writelines('\n'.join(pairs_raw_intensity_str))
+    return nbr_pairs
+
+
+def generate_overlap_pairs_txt(folder: str, overlap_thresh: float = .1):
+    """Assumes there being an overlap.npz file in  the folder. Construct two txt files:
+    - From the overlap_matrix, list all pairs of patces with ovelap > overlap_thresh and write the
+      pairs to pairs_with_over_{overlap_thresh}_overlap.txt.
+    - From the overlap_nbr_kps, list all pairs of patches sharing at least 1 keypoint and write the
+      pairs to pairs_sharinig_kps.txt.
+    """
+    overlap_file = np.load(os.path.join(folder, 'overlap.npz'))
+    nbr_pairs_above_overlap_thresh = _write_pairs_to_file(
+        np.triu(overlap_file['overlap_matrix']), overlap_thresh, folder,
+        f'pairs_with_over_{overlap_thresh}_overlap')
+    nbr_pairs_sharing_kps = _write_pairs_to_file(
+        np.triu(overlap_file['overlap_nbr_kps']), 0, folder,
+        'pairs_sharinig_kps')
+    print(
+        f'In {folder}, {nbr_pairs_above_overlap_thresh} pairs have > {overlap_thresh} overlap, '
+        f'{nbr_pairs_sharing_kps} pairs share at least one keypoint')
+    return nbr_pairs_above_overlap_thresh, nbr_pairs_sharing_kps
+
+
 def handle_folder(folder: str,
                   total_num_patches: int,
                   overlap_thresh: float = .1) -> int:
@@ -312,6 +356,7 @@ def handle_folder(folder: str,
                                           overlap_kps, folder)
     nbr_pairs_above_overlap_thresh = plot_ssspatches_in_folder(
         folder, overlap_thresh)
+    generate_overlap_pairs_txt(folder, overlap_thresh)
     return nbr_pairs_above_overlap_thresh
 
 
@@ -326,6 +371,7 @@ def main():
     train_outpath = f'{patch_outpath}/train'
     test_outpath = f'{patch_outpath}/test'
 
+    total_num_patches = 590
     total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
                                                      annotations_dir,
                                                      args.patch_size,
