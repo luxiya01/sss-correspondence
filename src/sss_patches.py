@@ -98,6 +98,20 @@ class SSSPatch:
         return len(self.annotated_keypoints)
 
     @property
+    def annotated_keypoints_sorted(self):
+        """Returns the annotated keypoints hashes and points as both as sorted list. The list
+        elements consist of keypoints in the form of (ping_idx, bin_idx) extracted from the
+        original annotated_keypoints' "pos" attribute, i.e. they are given in the index of
+        the patch. The list is sorted first according to ping_idx, then according to bin_idx."""
+        sorted_hashes = sorted(
+            self.annotated_keypoints,
+            key=lambda k: self.annotated_keypoints[k]['pos'])
+        sorted_pos = [
+            self.annotated_keypoints[k]['pos'] for k in sorted_hashes
+        ]
+        return sorted_hashes, sorted_pos
+
+    @property
     def sss_hits_bounds(self):
         """Returns a Rectangle class that represents the range of the sss_hits inside the patch."""
         #TODO: make pos threshold an input parameter

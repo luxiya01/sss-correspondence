@@ -12,7 +12,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from data import generate_sss_patches, train_test_split, plot_train_test_split
-from utils import compute_overlap_between_two_rectangles, get_sorted_patches_list
+from utils import (compute_overlap_between_two_rectangles,
+                   get_sorted_patches_list, get_gt_overlap_between_two_patches)
 from plot import (plot_ssspatch_with_annotated_keypoints,
                   plot_ssspatch_intensities,
                   plot_ssspatch_intensities_normalized,
@@ -250,6 +251,10 @@ def compute_overlap_matrix(
     for i, patch1_path in tqdm(enumerate(patches_in_dir)):
         with open(patch1_path, 'rb') as f1:
             patch1 = pickle.load(f1)
+            overlap_kps[patch1.patch_id][
+                'sorted_kps_hash'] = patch1.annotated_keypoints_sorted[0]
+            overlap_kps[patch1.patch_id][
+                'sorted_kps_pos'] = patch1.annotated_keypoints_sorted[1]
 
             for patch2_path in patches_in_dir[i:]:
                 with open(patch2_path, 'rb') as f2:
@@ -264,9 +269,12 @@ def compute_overlap_matrix(
                     overlap_nbr_kps = _update_overlap_keypoints(
                         patch1, patch2, overlap_nbr_kps)
 
-                    overlap_kps[patch1.patch_id][patch2.patch_id] = list(
-                        set(patch1.annotated_keypoints.keys()).intersection(
-                            patch2.annotated_keypoints.keys()))
+                    overlap_kps[patch1.patch_id][
+                        patch2.patch_id] = get_gt_overlap_between_two_patches(
+                            patch1, patch2)
+                    overlap_kps[patch2.patch_id][
+                        patch1.patch_id] = get_gt_overlap_between_two_patches(
+                            patch2, patch1)
     return overlap_matrix, overlap_nbr_kps, overlap_kps
 
 
@@ -372,25 +380,26 @@ def main():
     test_outpath = f'{patch_outpath}/test'
 
     total_num_patches = 590
-    total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
-                                                     annotations_dir,
-                                                     args.patch_size,
-                                                     args.step_size,
-                                                     patch_outpath)
-    split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
-                                            args.test_size, patch_outpath,
-                                            train_outpath, test_outpath)
-    nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
-                                   args.overlap_thresh)
+    #    total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
+    #                                                     annotations_dir,
+    #                                                    args.patch_size,
+    #                                                    args.step_size,
+    #                                                    patch_outpath)
+    #   split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
+    #                                           args.test_size, patch_outpath,
+    #                                           train_outpath, test_outpath)
+    #    nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
+    #                                   args.overlap_thresh)
     nbr_train_pairs = handle_folder(train_outpath, total_num_patches,
                                     args.overlap_thresh)
     print(
         f'Number of train pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_train_pairs}'
     )
-    print(
-        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
-    )
 
+
+#    print(
+#        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
+#    )
 
 if __name__ == '__main__':
     main()
