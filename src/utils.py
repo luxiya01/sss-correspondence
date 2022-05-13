@@ -41,3 +41,19 @@ def get_sorted_patches_list(folder: str) -> list:
         ],
         key=lambda p: int(p.split('/')[-1].split('_')[0][5:]))
     return patches_in_dir
+
+def get_gt_overlap_between_two_patches(patch1: SSSPatch, patch2: SSSPatch) -> list:
+    """Given two SSSPatches, return a list of groundtruth keypoint correspondences.
+    The length of the list is the same as the number of keypoints in patch1, and the value at index
+    i is the corresponding keypoint index in patch2, i.e. list[i] = j means that
+    patch1.annotated_keypoints_sorted[1][i] = patch2.annotated_keypoints_sorted[1][j]. If there is
+    no corresponding keypoints, the value is set to -1."""
+    patch1_kp_hash_sorted, patch1_kp_pos_sorted = patch1.annotated_keypoints_sorted
+    patch2_kp_hash_sorted, patch2_kp_pos_sorted = patch2.annotated_keypoints_sorted
+
+    patch1_kp_to_patch2_kp = [-1] * len(patch1_kp_hash_sorted)
+    for i, key in enumerate(patch1_kp_hash_sorted):
+        if key not in patch2_kp_hash_sorted:
+            continue
+        patch1_kp_to_patch2_kp[i] = patch2_kp_hash_sorted.index(key)
+    return patch1_kp_to_patch2_kp
