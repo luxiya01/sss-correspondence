@@ -18,12 +18,31 @@ def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
     for patch_path in patches:
         with open(patch_path, 'rb') as f:
             patch = pickle.load(f)
+            if len(patch.annotated_keypoints.keys()) <= 0:
+                print(f'Ignoring patch {patch.patch_id} from file {patch.filename} since it contains 0 keypoint.')
+                continue
 
-            if algo == 'sift':
+            if 'sift' in algo:
                 kp_raw, desc_raw = compute_descriptors_at_annotated_locations(
                     patch, sift, use_orig_sss_intensities=True)
                 kp_norm, desc_norm = compute_descriptors_at_annotated_locations(
                     patch, sift, use_orig_sss_intensities=False)
+
+                # L2 normalization
+                if algo == 'sift':
+                    desc_raw = desc_raw / (np.linalg.norm(desc_raw, axis=1, ord=2, keepdims=True)
+                        + np.finfo(float).eps)
+                    desc_norm = desc_norm / (np.linalg.norm(desc_norm, axis=1, ord=2, keepdims=True)
+                        + np.finfo(float).eps)
+
+
+                # L1 normalization + Sqrt
+                if algo == 'rootsift':
+                    desc_raw = np.sqrt(desc_raw / (np.linalg.norm(desc_raw, axis=1, ord=1, keepdims=True)
+                        + np.finfo(float).eps))
+                    desc_norm = np.sqrt(desc_norm / (np.linalg.norm(desc_norm, axis=1, ord=1, keepdims=True)
+                        + np.finfo(float).eps))
+
             elif algo == 'neighbour':
                 kp_raw, desc_raw = compute_flattened_neighbourhood_pixel_values(
                     patch, use_orig_sss_intensities=True)
@@ -85,7 +104,7 @@ def compute_descriptors_at_annotated_locations(
                                         cv2.NORM_MINMAX).astype('uint8')
     annotated_kps_as_cv2_kp, desc = algo.compute(normalized_8bit_img,
                                                  annotated_kps_as_cv2_kp)
-    return np.array(annotated_kps, dtype=np.float64), desc
+    return np.array(annotated_kps, dtype=np.float32), desc
 
 
 def compute_flattened_neighbourhood_pixel_values(
@@ -146,7 +165,7 @@ def compute_flattened_neighbourhood_pixel_values(
                                     1].flatten()
         desc.append(flatten_pixels)
         print(ping_nbr, bin_nbr, len(flatten_pixels))
-    return np.array(annotated_kps), np.array(desc)
+    return np.array(annotated_kps, dtype=np.float32), np.array(desc, dtype=np.float32)
 
 
 def draw_keypoints_and_descriptors(patch: SSSPatch,
