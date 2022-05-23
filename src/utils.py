@@ -34,15 +34,17 @@ def compute_overlap_between_two_rectangles(r1: Rectangle,
 
 def get_sorted_patches_list(folder: str) -> list:
     """Return a list of patches in the given folder, sorted in ascending order of patch id"""
+    patches_in_dir = [
+        os.path.join(folder, x) for x in os.listdir(folder)
+        if x.split('.')[-1] == 'pkl' and not os.path.isdir(os.path.join(folder, x))
+    ]
     patches_in_dir = sorted(
-        [
-            os.path.join(folder, x)
-            for x in os.listdir(folder) if x.split('.')[-1] == 'pkl'
-        ],
-        key=lambda p: int(p.split('/')[-1].split('_')[0][5:]))
+        patches_in_dir, key=lambda p: int(p.split('/')[-1].split('_')[0][5:]))
     return patches_in_dir
 
-def get_gt_overlap_between_two_patches(patch1: SSSPatch, patch2: SSSPatch) -> list:
+
+def get_gt_overlap_between_two_patches(patch1: SSSPatch,
+                                       patch2: SSSPatch) -> list:
     """Given two SSSPatches, return a list of groundtruth keypoint correspondences.
     The length of the list is the same as the number of keypoints in patch1, and the value at index
     i is the corresponding keypoint index in patch2, i.e. list[i] = j means that
