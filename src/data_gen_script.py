@@ -251,6 +251,11 @@ def compute_overlap_matrix(
     for i, patch1_path in tqdm(enumerate(patches_in_dir)):
         with open(patch1_path, 'rb') as f1:
             patch1 = pickle.load(f1)
+            if len(patch1.annotated_keypoints) <= 0:
+                print(
+                    f'patch {patch1.patch_id} from {patch1.file_id} has no annotated_keypoints. Skipping...'
+                )
+                continue
             overlap_kps[patch1.patch_id][
                 'sorted_kps_hash'] = patch1.annotated_keypoints_sorted[0]
             overlap_kps[patch1.patch_id][
@@ -259,6 +264,12 @@ def compute_overlap_matrix(
             for patch2_path in patches_in_dir[i:]:
                 with open(patch2_path, 'rb') as f2:
                     patch2 = pickle.load(f2)
+
+                    if len(patch2.annotated_keypoints) <= 0:
+                        print(
+                            f'patch {patch2.patch_id} from {patch2.file_id} has no annotated_keypoints. Skipping...'
+                        )
+                        continue
 
                     # ignore overlaps from patches that are created from the same sss_meas_data
                     if patch2.file_id == patch1.file_id:
@@ -365,6 +376,16 @@ def handle_folder(folder: str,
     nbr_pairs_above_overlap_thresh = plot_ssspatches_in_folder(
         folder, overlap_thresh)
     generate_overlap_pairs_txt(folder, overlap_thresh)
+
+    pkl_folder = os.path.join(folder, 'pkl')
+    if os.path.exists(pkl_folder):
+        shutil.rmtree(pkl_folder)
+    pkl_files = [
+        os.path.join(folder, x) for x in os.listdir(folder)
+        if x.split('.')[-1] == 'pkl'
+    ]
+    for filepath in pkl_files:
+        shutil.move(filepath, pkl_folder)
     return nbr_pairs_above_overlap_thresh
 
 
@@ -388,8 +409,8 @@ def main():
     #   split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
     #                                           args.test_size, patch_outpath,
     #                                           train_outpath, test_outpath)
-    #    nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
-    #                                   args.overlap_thresh)
+    nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
+                                   args.overlap_thresh)
     nbr_train_pairs = handle_folder(train_outpath, total_num_patches,
                                     args.overlap_thresh)
     print(
