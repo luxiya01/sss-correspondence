@@ -8,6 +8,7 @@ from sss_patches import SSSPatch
 
 
 def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
+    nbr_patches_without_kps = 0
     patches = get_sorted_patches_list(folder)
     sift = cv2.SIFT_create()
 
@@ -19,7 +20,10 @@ def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
         with open(patch_path, 'rb') as f:
             patch = pickle.load(f)
             if len(patch.annotated_keypoints.keys()) <= 0:
-                print(f'Ignoring patch {patch.patch_id} from file {patch.filename} since it contains 0 keypoint.')
+                nbr_patches_without_kps += 1
+                print(
+                    f'Ignoring patch {patch.patch_id} from file {patch.filename} since it contains 0 keypoint.'
+                )
                 continue
 
             if 'sift' in algo:
@@ -30,18 +34,22 @@ def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
 
                 # L2 normalization
                 if algo == 'sift':
-                    desc_raw = desc_raw / (np.linalg.norm(desc_raw, axis=1, ord=2, keepdims=True)
-                        + np.finfo(float).eps)
-                    desc_norm = desc_norm / (np.linalg.norm(desc_norm, axis=1, ord=2, keepdims=True)
-                        + np.finfo(float).eps)
-
+                    desc_raw = desc_raw / (np.linalg.norm(
+                        desc_raw, axis=1, ord=2, keepdims=True) +
+                                           np.finfo(float).eps)
+                    desc_norm = desc_norm / (np.linalg.norm(
+                        desc_norm, axis=1, ord=2, keepdims=True) +
+                                             np.finfo(float).eps)
 
                 # L1 normalization + Sqrt
                 if algo == 'rootsift':
-                    desc_raw = np.sqrt(desc_raw / (np.linalg.norm(desc_raw, axis=1, ord=1, keepdims=True)
-                        + np.finfo(float).eps))
-                    desc_norm = np.sqrt(desc_norm / (np.linalg.norm(desc_norm, axis=1, ord=1, keepdims=True)
-                        + np.finfo(float).eps))
+                    desc_raw = np.sqrt(
+                        desc_raw /
+                        (np.linalg.norm(desc_raw, axis=1, ord=1, keepdims=True)
+                         + np.finfo(float).eps))
+                    desc_norm = np.sqrt(desc_norm / (np.linalg.norm(
+                        desc_norm, axis=1, ord=1, keepdims=True) +
+                                                     np.finfo(float).eps))
 
             elif algo == 'neighbour':
                 kp_raw, desc_raw = compute_flattened_neighbourhood_pixel_values(
@@ -54,6 +62,9 @@ def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
                      desc_raw=desc_raw,
                      kp_norm=kp_norm,
                      desc_norm=desc_norm)
+    print(
+        f'{nbr_patches_without_kps} patches have no annotated kps in {folder}.'
+    )
 
 
 def compute_descriptors_at_annotated_locations(
@@ -165,7 +176,8 @@ def compute_flattened_neighbourhood_pixel_values(
                                     1].flatten()
         desc.append(flatten_pixels)
         print(ping_nbr, bin_nbr, len(flatten_pixels))
-    return np.array(annotated_kps, dtype=np.float32), np.array(desc, dtype=np.float32)
+    return np.array(annotated_kps,
+                    dtype=np.float32), np.array(desc, dtype=np.float32)
 
 
 def draw_keypoints_and_descriptors(patch: SSSPatch,
