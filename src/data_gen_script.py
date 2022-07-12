@@ -380,6 +380,7 @@ def handle_folder(folder: str,
     pkl_folder = os.path.join(folder, 'pkl')
     if os.path.exists(pkl_folder):
         shutil.rmtree(pkl_folder)
+    os.makedirs(pkl_folder)
     pkl_files = [
         os.path.join(folder, x) for x in os.listdir(folder)
         if x.split('.')[-1] == 'pkl'
@@ -400,15 +401,15 @@ def main():
     train_outpath = f'{patch_outpath}/train'
     test_outpath = f'{patch_outpath}/test'
 
-    total_num_patches = 590
-    #    total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
-    #                                                     annotations_dir,
-    #                                                    args.patch_size,
-    #                                                    args.step_size,
-    #                                                    patch_outpath)
-    #   split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
-    #                                           args.test_size, patch_outpath,
-    #                                           train_outpath, test_outpath)
+    #total_num_patches = 590
+    total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
+                                                     annotations_dir,
+                                                     args.patch_size,
+                                                     args.step_size,
+                                                     patch_outpath)
+    split_patches_into_training_and_testing(data_info_dict_path, args.ref_sss,
+                                            args.test_size, patch_outpath,
+                                            train_outpath, test_outpath)
     nbr_test_pairs = handle_folder(test_outpath, total_num_patches,
                                    args.overlap_thresh)
     nbr_train_pairs = handle_folder(train_outpath, total_num_patches,
@@ -417,10 +418,10 @@ def main():
         f'Number of train pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_train_pairs}'
     )
 
+    print(
+        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
+    )
 
-#    print(
-#        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
-#    )
 
 if __name__ == '__main__':
     main()
