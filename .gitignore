@@ -1,3 +1,6 @@
+# VSCode
+*.vscode
+
 # Jupyter notebooks
 notebooks/
 
