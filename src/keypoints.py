@@ -8,6 +8,8 @@ from sss_patches import SSSPatch
 
 
 def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
+    """Compute keypoint descriptors for all patches in the given folder.
+    Available algo: sift, rootsift, neighbour."""
     nbr_patches_without_kps = 0
     patches = get_sorted_patches_list(folder)
     sift = cv2.SIFT_create()
@@ -186,6 +188,9 @@ def draw_keypoints_and_descriptors(patch: SSSPatch,
                                    desc_name: str,
                                    kp_size=16):
     #TODO: add documentation for this function
+    """Given a patch, associated keypoints and descriptors, draw two subplots: one with
+    keypoint locations overlayed on top of the patch, the other with descriptors flattened
+    out as a 2D heatmap."""
     kps = [cv2.KeyPoint(x[0], x[1], size=kp_size) for x in kps]
 
     img = cv2.normalize(normalize_waterfall_image(patch.sss_waterfall_image),
