@@ -32,6 +32,13 @@ class SSSHit:
         """
         return math.asin((self.h - self.h_s) / self.r_s)
 
+    @property
+    def theta_s(self):
+        """Alias for self.grazing_angle."""
+        return self.grazing_angle
+
+    def __repr__(self) -> str:
+        return f"SSSHit: r_s={self.r_s}, h={self.h}, h_s={self.h_s}"
 
 def estimate_transducer_radius(wavelength: float,
                                vertical_opening: float) -> float:
@@ -56,9 +63,9 @@ def estimate_transducer_radius(wavelength: float,
     return radius
 
 
-def echo_intensity_at_ssshit(hit: SSSHit, frequency: float, wavelength: float,
-                             mounting_angle: float,
-                             transducer_radius: float) -> float:
+def modelled_echo_intensity(hit: SSSHit, frequency: float, wavelength: float,
+                            mounting_angle: float,
+                            transducer_radius: float) -> float:
     """Estimate echo intensity at a SSS hit on the seafloor using Eq(5) from 
     `On-Line Multi-Class Segmentation of Side-Scan Sonar Imagery Using an Autonomous
     Unverwater  Vehicle`
@@ -91,3 +98,26 @@ def echo_intensity_at_ssshit(hit: SSSHit, frequency: float, wavelength: float,
     intensity = frequency * math.pow(transducer_radius, 4) / math.pow(
         hit.r_s, 2) * paren_term
     return intensity
+
+
+def intensity_correction(hit: SSSHit, raw_intensity: float,
+                         modelled_intensity: float) -> float:
+    """Perform intensity correction on the raw_intensity at the given hit point using Eq(10)
+    from `On-Line Multi-Class Segmentation of Side-Scan Sonar Imagery Using an Autonomous
+    Unverwater  Vehicle`
+
+    Parameters
+    ----------
+    hit : SSSHit
+        The point where the raw intensity is to be corrected.
+    raw_intensity : float
+        Raw intensity value as given by the sensor.
+    modelled_intensity : float
+        Modelled intensity value at the hit location as given by the function `modelled_echo_intensity`
+
+    Returns
+    -------
+    intensity: float
+        Corrected intensity value.
+    """
+    return raw_intensity/(modelled_intensity*math.cos(hit.theta_s))
