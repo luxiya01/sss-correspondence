@@ -64,8 +64,7 @@ def compute_and_store_descriptors(folder: str, algo: str = 'sift'):
                      desc_raw=desc_raw,
                      kp_norm=kp_norm,
                      desc_norm=desc_norm,
-                     image=patch.sss_waterfall_image
-                     )
+                     image=patch.sss_waterfall_image)
     print(
         f'{nbr_patches_without_kps} patches have no annotated kps in {folder}.'
     )
@@ -107,7 +106,7 @@ def compute_descriptors_at_annotated_locations(
         annotated_kps.append([bin_nbr, ping_nbr])
 
     annotated_kps_as_cv2_kp = [
-        cv2.KeyPoint(bin_nbr, ping_nbr, _size=kp_size)
+        cv2.KeyPoint(bin_nbr, ping_nbr, size=kp_size)
         for (bin_nbr, ping_nbr) in annotated_kps
     ]
 
@@ -193,7 +192,7 @@ def draw_keypoints_and_descriptors(patch: SSSPatch,
     """Given a patch, associated keypoints and descriptors, draw two subplots: one with
     keypoint locations overlayed on top of the patch, the other with descriptors flattened
     out as a 2D heatmap."""
-    kps = [cv2.KeyPoint(x[0], x[1], _size=kp_size) for x in kps]
+    kps = [cv2.KeyPoint(x[0], x[1], size=kp_size) for x in kps]
 
     img = cv2.normalize(normalize_waterfall_image(patch.sss_waterfall_image),
                         None, 0, 255, cv2.NORM_MINMAX).astype('uint8')

@@ -10,7 +10,7 @@ Exposed functions:
                          patch_size: int, step_size: int, patch_outpath: str,
                          patch_id_init_val: int = 0)
 """
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import json
 import os
 import pickle
@@ -221,7 +221,8 @@ def plot_train_test_split(split_dict: dict,
 
 def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
                                       start_ping: int, end_ping: int,
-                                      start_bin: int, end_bin: int) -> dict:
+                                      start_bin: int,
+                                      end_bin: int) -> OrderedDict:
     """
     Returns a list of annotated keypoints found in the patch bounded by start and end pings and
     bins.
@@ -246,7 +247,7 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
 
     Returns
     -------
-    keypoints: dict
+    keypoints: OrderedDict
         A dictionary of keypoint hahshes whose locations fall into the patch.
         The dictionary has the following structure:
             {keypoint hash: {"pos": (ping_idx, bin_idx), "annotation_file": path to the annotation
@@ -256,7 +257,7 @@ def _get_annotated_keypoints_in_patch(path: str, annotations_dir: str,
         sss_meas_data at (ping_idx+start_ping, bin_idx + start_bin)
     """
     patch_filename = os.path.basename(path)
-    keypoints = {}
+    keypoints = OrderedDict()
 
     for (dirpath, _, filenames) in os.walk(annotations_dir):
         for filename in filenames:

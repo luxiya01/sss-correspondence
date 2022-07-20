@@ -7,6 +7,7 @@ Exposes dataclass:
 from dataclasses import dataclass
 import numpy as np
 from simple_shapes import Rectangle
+from collections import OrderedDict
 
 
 @dataclass
@@ -49,7 +50,7 @@ class SSSPatch:
         shape = (self.length, self.width, 3)
     is_port: bool
         True if the patch is extracted from the port side, False if it is from the starboard side
-    annotated_keypoints: dict
+    annotated_keypoints: OrderedDict
         A dictionary of keypoint hahshes whose locations fall into the patch.
         The dictionary has the following structure:
             {keypoint hash: {"pos": (ping_idx, bin_idx), "annotation_file": path to the annotation
@@ -70,7 +71,7 @@ class SSSPatch:
     sss_waterfall_image: np.array
     sss_hits: np.array
     is_port: bool
-    annotated_keypoints: dict
+    annotated_keypoints: OrderedDict
 
     @property
     def nbr_pings(self):
@@ -96,20 +97,6 @@ class SSSPatch:
     def keypoints_count(self):
         """Returns the total number of keypoints in the patch"""
         return len(self.annotated_keypoints)
-
-    @property
-    def annotated_keypoints_sorted(self):
-        """Returns the annotated keypoints hashes and points as both as sorted list. The list
-        elements consist of keypoints in the form of (ping_idx, bin_idx) extracted from the
-        original annotated_keypoints' "pos" attribute, i.e. they are given in the index of
-        the patch. The list is sorted first according to ping_idx, then according to bin_idx."""
-        sorted_hashes = sorted(
-            self.annotated_keypoints,
-            key=lambda k: self.annotated_keypoints[k]['pos'])
-        sorted_pos = [
-            self.annotated_keypoints[k]['pos'] for k in sorted_hashes
-        ]
-        return sorted_hashes, sorted_pos
 
     @property
     def sss_hits_bounds(self):

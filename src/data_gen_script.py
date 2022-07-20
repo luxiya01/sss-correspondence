@@ -2,23 +2,25 @@
 Script to split a folder of sss_meas_data into SSSPatch, split the generated SSSPatches into
 training and testing data, compute overlap matrix and store images.
 """
-from argparse import ArgumentParser
-from collections import defaultdict
 import json
 import os
 import pickle
 import shutil
-import numpy as np
+from argparse import ArgumentParser
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
+import numpy as np
 from tqdm import tqdm
+
 from data import generate_sss_patches, train_test_split, plot_train_test_split
-from utils import (compute_overlap_between_two_rectangles,
-                   get_sorted_patches_list, get_gt_overlap_between_two_patches)
 from plot import (plot_ssspatch_with_annotated_keypoints,
                   plot_ssspatch_intensities,
                   plot_ssspatch_intensities_normalized,
                   plot_corresponding_keypoints)
 from sss_patches import SSSPatch
+from utils import (compute_overlap_between_two_rectangles,
+                   get_sorted_patches_list, get_gt_overlap_between_two_patches)
 
 
 def get_args():
@@ -142,10 +144,10 @@ def split_patches_into_training_and_testing(data_info_dict_path: str,
     num_patches = len(train_patches) + len(test_patches)
     print(f'Total number of patches: {num_patches}')
     print(
-        f'Number of training patches: {len(train_patches)}, {len(train_patches)/num_patches*100}% '
+        f'Number of training patches: {len(train_patches)}, {len(train_patches) / num_patches * 100}% '
         f'of total number of patches')
     print(
-        f'Number of testing patches: {len(test_patches)}, {len(test_patches)/num_patches*100}% '
+        f'Number of testing patches: {len(test_patches)}, {len(test_patches) / num_patches * 100}% '
         f'of total number of patches')
 
 
@@ -256,10 +258,17 @@ def compute_overlap_matrix(
                     f'patch {patch1.patch_id} from {patch1.file_id} has no annotated_keypoints. Skipping...'
                 )
                 continue
-            overlap_kps[patch1.patch_id][
-                'sorted_kps_hash'] = patch1.annotated_keypoints_sorted[0]
-            overlap_kps[patch1.patch_id][
-                'sorted_kps_pos'] = patch1.annotated_keypoints_sorted[1]
+
+            #           overlap_kps[patch1.patch_id][
+            #               'sorted_kps_hash'] = patch1.annotated_keypoints_sorted[0]
+            #           overlap_kps[patch1.patch_id][
+            #               'sorted_kps_pos'] = patch1.annotated_keypoints_sorted[1]
+
+            overlap_kps[patch1.patch_id]['kp_hash'] = list(
+                patch1.annotated_keypoints.keys())
+            overlap_kps[patch1.patch_id]['kp_pos'] = [
+                x['pos'] for x in patch1.annotated_keypoints.values()
+            ]
 
             for patch2_path in patches_in_dir[i:]:
                 with open(patch2_path, 'rb') as f2:
@@ -282,10 +291,10 @@ def compute_overlap_matrix(
 
                     overlap_kps[patch1.patch_id][
                         patch2.patch_id] = get_gt_overlap_between_two_patches(
-                            patch1, patch2)
+                        patch1, patch2)
                     overlap_kps[patch2.patch_id][
                         patch1.patch_id] = get_gt_overlap_between_two_patches(
-                            patch2, patch1)
+                        patch2, patch1)
     return overlap_matrix, overlap_nbr_kps, overlap_kps
 
 
@@ -385,6 +394,7 @@ def handle_folder(folder: str,
         os.path.join(folder, x) for x in os.listdir(folder)
         if x.split('.')[-1] == 'pkl'
     ]
+    print(pkl_files)
     for filepath in pkl_files:
         shutil.move(filepath, pkl_folder)
     return nbr_pairs_above_overlap_thresh
@@ -397,11 +407,11 @@ def main():
     annotations_dir = f'{args.data_dir}/annotations'
     patch_outpath = (
         f'{args.data_dir}/patch{args.patch_size}_step{args.step_size}'
-        f'_test{args.test_size}_ref{args.ref_sss}')
+        f'_test{args.test_size}_ref{args.ref_sss}_OrderedDict')
     train_outpath = f'{patch_outpath}/train'
     test_outpath = f'{patch_outpath}/test'
 
-    #total_num_patches = 590
+    #    total_num_patches = 590
     total_num_patches = generate_sss_patches_for_dir(data_info_dict_path,
                                                      annotations_dir,
                                                      args.patch_size,
@@ -415,11 +425,11 @@ def main():
     nbr_train_pairs = handle_folder(train_outpath, total_num_patches,
                                     args.overlap_thresh)
     print(
-        f'Number of train pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_train_pairs}'
+        f'Number of train pairs > {args.overlap_thresh * 100:.2f} overlap: {nbr_train_pairs}'
     )
 
     print(
-        f'Number of test pairs > {args.overlap_thresh*100:.2f} overlap: {nbr_test_pairs}'
+        f'Number of test pairs > {args.overlap_thresh * 100:.2f} overlap: {nbr_test_pairs}'
     )
 
 

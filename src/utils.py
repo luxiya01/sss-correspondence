@@ -36,7 +36,8 @@ def get_sorted_patches_list(folder: str) -> list:
     """Return a list of patches in the given folder, sorted in ascending order of patch id"""
     patches_in_dir = [
         os.path.join(folder, x) for x in os.listdir(folder)
-        if x.split('.')[-1] == 'pkl' and not os.path.isdir(os.path.join(folder, x))
+        if x.split('.')[-1] == 'pkl'
+        and not os.path.isdir(os.path.join(folder, x))
     ]
     patches_in_dir = sorted(
         patches_in_dir, key=lambda p: int(p.split('/')[-1].split('_')[0][5:]))
@@ -50,12 +51,12 @@ def get_gt_overlap_between_two_patches(patch1: SSSPatch,
     i is the corresponding keypoint index in patch2, i.e. list[i] = j means that
     patch1.annotated_keypoints_sorted[1][i] = patch2.annotated_keypoints_sorted[1][j]. If there is
     no corresponding keypoints, the value is set to -1."""
-    patch1_kp_hash_sorted, patch1_kp_pos_sorted = patch1.annotated_keypoints_sorted
-    patch2_kp_hash_sorted, patch2_kp_pos_sorted = patch2.annotated_keypoints_sorted
+    patch1_kp_hash = list(patch1.annotated_keypoints.keys())
+    patch2_kp_hash = list(patch2.annotated_keypoints.keys())
 
-    patch1_kp_to_patch2_kp = [-1] * len(patch1_kp_hash_sorted)
-    for i, key in enumerate(patch1_kp_hash_sorted):
-        if key not in patch2_kp_hash_sorted:
+    patch1_kp_to_patch2_kp = [-1] * len(patch1_kp_hash)
+    for i, key in enumerate(patch1_kp_hash):
+        if key not in patch2_kp_hash:
             continue
-        patch1_kp_to_patch2_kp[i] = patch2_kp_hash_sorted.index(key)
+        patch1_kp_to_patch2_kp[i] = patch2_kp_hash.index(key)
     return patch1_kp_to_patch2_kp
