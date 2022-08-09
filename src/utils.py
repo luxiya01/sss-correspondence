@@ -82,8 +82,8 @@ def serialize_ssspatch_to_npz(root_folder: str) -> None:
                                   for kp in patch.annotated_keypoints.values()
                                   ])
             np.savez(os.path.join(npz_folder, f'{patch.patch_id}.npz'),
-                     patch_id=patch.patch_id,
+                     idx=patch.patch_id,
                      pos=patch.pos,
                      rpy=patch.rpy,
                      sss_waterfall_image=patch.sss_waterfall_image,
-                     annotated_keypoints=keypoints)
+                     keypoints=keypoints)
