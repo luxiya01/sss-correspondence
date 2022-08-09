@@ -1,7 +1,9 @@
 import numpy as np
 import os
+import pickle
 from simple_shapes import Rectangle
 from sss_patches import SSSPatch
+from tqdm import tqdm
 
 
 def normalize_waterfall_image(waterfall_image: np.array,
@@ -60,3 +62,28 @@ def get_gt_overlap_between_two_patches(patch1: SSSPatch,
             continue
         patch1_kp_to_patch2_kp[i] = patch2_kp_hash.index(key)
     return patch1_kp_to_patch2_kp
+
+
+def serialize_ssspatch_to_npz(root_folder: str) -> None:
+    """Serialize all ssspatches under root_folder/pkl to npz files and store the files under
+    root_folder/npz."""
+    pkl_folder = os.path.join(root_folder, 'pkl')
+    npz_folder = os.path.join(root_folder, 'npz')
+
+    if not os.path.exists(npz_folder):
+        os.mkdir(npz_folder)
+
+    for filename in tqdm(os.listdir(pkl_folder)):
+        with open(os.path.join(pkl_folder, filename), 'rb') as f:
+            patch = pickle.load(f)
+
+            # Store keypoints as (bin_nbr (x), ping_nbr (y))
+            keypoints = np.array([[kp['pos'][1], kp['pos'][0]]
+                                  for kp in patch.annotated_keypoints.values()
+                                  ])
+            np.savez(os.path.join(npz_folder, f'{patch.patch_id}.npz'),
+                     patch_id=patch.patch_id,
+                     pos=patch.pos,
+                     rpy=patch.rpy,
+                     sss_waterfall_image=patch.sss_waterfall_image,
+                     annotated_keypoints=keypoints)
